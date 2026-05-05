@@ -219,6 +219,16 @@ async function archiveStorage(id) {
     }
 }
 
+async function unarchiveStorage(id) {
+    try {
+        const res = await api.put(`/storage/${id}`, { status: 'active' });
+        if (res.success) { showToast('Moved', 'Storage plan moved to active', 'success'); loadStorageData(); }
+        else showToast('Error', res.error || 'Move failed', 'error');
+    } catch (err) {
+        showToast('Error', 'Failed to move', 'error');
+    }
+}
+
 let activeStorageCtxMenu = null;
 function closeStorageCtxMenu() {
     if (activeStorageCtxMenu) { activeStorageCtxMenu.remove(); activeStorageCtxMenu = null; }
@@ -234,6 +244,7 @@ function showStorageMenu(btn, id, comments) {
         <div class="ctx-item" onclick="openStorageComment(${id}, '${safeComments}');closeStorageCtxMenu()">💬 Comment</div>
         <div class="ctx-divider"></div>
         ${currentStorageTab !== 'archived' ? `<div class="ctx-item" onclick="archiveStorage(${id});closeStorageCtxMenu()">📦 Move to Archive</div><div class="ctx-divider"></div>` : ''}
+        ${currentStorageTab === 'archived' ? `<div class="ctx-item" onclick="unarchiveStorage(${id});closeStorageCtxMenu()">📦 Move to active storage plans</div><div class="ctx-divider"></div>` : ''}
         <div class="ctx-item ctx-item-danger" onclick="deleteStorage(${id});closeStorageCtxMenu()">🗑️ Delete</div>
     `;
     const rect = btn.getBoundingClientRect();
