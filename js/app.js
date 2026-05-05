@@ -197,7 +197,7 @@ document.addEventListener('input', function (e) {
 
 document.addEventListener('DOMContentLoaded', function () {
     // Login form
-    document.getElementById('login-form')?.addEventListener('submit', handleLogin);
+    // Login form submissions are handled via inline onsubmit="..." in index.html
 
     // Nav items
     document.querySelectorAll('.nav-item[data-page]').forEach(item => {
