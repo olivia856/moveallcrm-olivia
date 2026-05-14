@@ -218,7 +218,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 case 'add-contact': navigateTo('contacts'); setTimeout(() => openCreateModal('contact-modal'), 100); break;
                 case 'add-storage': navigateTo('storage'); setTimeout(() => openCreateModal('storage-modal'), 100); break;
                 case 'add-contractor': navigateTo('contractors'); setTimeout(() => openCreateModal('contractor-modal'), 100); break;
-                case 'add-user': navigateTo('users'); setTimeout(() => openCreateModal('user-modal'), 100); break;
+                case 'add-user': navigateTo('users'); setTimeout(() => openAddUserModal(), 100); break;
             }
         });
     });

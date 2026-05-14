@@ -8,7 +8,7 @@ async function getAll(req, res, next) {
 
         let q = supabase
             .from('users')
-            .select('id, name, phone, email, role, created_at, updated_at', { count: 'exact' });
+            .select('id, name, phone, email, role, contractor_name, created_at, updated_at', { count: 'exact' });
 
         if (search) q = q.or(`name.ilike.%${search}%,email.ilike.%${search}%,phone.ilike.%${search}%`);
 
@@ -27,7 +27,7 @@ async function getById(req, res, next) {
     try {
         const { data, error } = await supabase
             .from('users')
-            .select('id, name, phone, email, role, created_at, updated_at')
+            .select('id, name, phone, email, role, contractor_name, created_at, updated_at')
             .eq('id', req.params.id)
             .single();
         if (error) return res.status(404).json({ success: false, error: 'User not found.' });
@@ -38,13 +38,15 @@ async function getById(req, res, next) {
 // POST /api/users
 async function create(req, res, next) {
     try {
-        const { name, phone, email, password, role } = req.body;
+        const { name, phone, email, password, role, contractor_name } = req.body;
         if (!password) return res.status(400).json({ success: false, error: 'Password is required.' });
 
         const password_hash = await bcrypt.hash(password, 10);
         const { data, error } = await supabase.from('users').insert({
-            name, phone: phone || null, email, password_hash, role: role || 'staff'
-        }).select('id, name, phone, email, role, created_at').single();
+            name, phone: phone || null, email, password_hash,
+            role: role || 'staff',
+            contractor_name: contractor_name || null
+        }).select('id, name, phone, email, role, contractor_name, created_at').single();
 
         if (error) throw error;
         res.status(201).json({ success: true, data });
@@ -54,7 +56,7 @@ async function create(req, res, next) {
 // PUT /api/users/:id
 async function update(req, res, next) {
     try {
-        const simpleFields = ['name', 'phone', 'email', 'role'];
+        const simpleFields = ['name', 'phone', 'email', 'role', 'contractor_name'];
         const updates = { updated_at: new Date().toISOString() };
         for (const f of simpleFields) {
             if (req.body[f] !== undefined) updates[f] = req.body[f] === '' ? null : req.body[f];
@@ -67,7 +69,7 @@ async function update(req, res, next) {
             .from('users')
             .update(updates)
             .eq('id', req.params.id)
-            .select('id, name, phone, email, role, updated_at')
+            .select('id, name, phone, email, role, contractor_name, updated_at')
             .single();
 
         if (error) return res.status(404).json({ success: false, error: 'User not found.' });

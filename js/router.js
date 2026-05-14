@@ -36,6 +36,8 @@ function navigateTo(page) {
         document.getElementById('page-action-text').textContent = config.action.text;
         if (page === 'jobs') {
             actionBtn.onclick = () => openJobBrandPicker();
+        } else if (page === 'users') {
+            actionBtn.onclick = () => openAddUserModal();
         } else {
             actionBtn.onclick = () => openCreateModal(config.action.modal);
         }

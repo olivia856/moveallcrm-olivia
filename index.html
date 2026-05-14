@@ -634,6 +634,8 @@
                                 <th>Name</th>
                                 <th>Phone Number</th>
                                 <th>Email</th>
+                                <th>Role</th>
+                                <th>Linked Contractor</th>
                                 <th>Actions</th>
                             </tr>
                         </thead>
@@ -1413,14 +1415,34 @@
             </div>
             <form id="user-form" class="modal-form" onsubmit="saveUser(event)">
                 <input type="hidden" id="user-id">
-                <div class="form-group"><label for="user-name-input">Name *</label><input type="text"
-                        id="user-name-input" required></div>
-                <div class="form-group"><label for="user-phone-input">Phone Number</label><input type="tel"
-                        id="user-phone-input"></div>
-                <div class="form-group"><label for="user-email-input">Email *</label><input type="email"
-                        id="user-email-input" required></div>
-                <div class="form-group"><label for="user-password-input">Password *</label><input type="password"
-                        id="user-password-input"></div>
+                <div class="form-row">
+                    <div class="form-group"><label for="user-name-input">Name *</label><input type="text"
+                            id="user-name-input" required></div>
+                    <div class="form-group"><label for="user-phone-input">Phone Number</label><input type="tel"
+                            id="user-phone-input"></div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group"><label for="user-email-input">Email *</label><input type="email"
+                            id="user-email-input" required></div>
+                    <div class="form-group"><label for="user-password-input">Password</label><input type="password"
+                            id="user-password-input" placeholder="Leave blank to keep existing"></div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="user-role-input">Role *</label>
+                        <select id="user-role-input">
+                            <option value="staff">Staff</option>
+                            <option value="admin">Admin</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="user-contractor-input">Linked Contractor Company</label>
+                        <select id="user-contractor-input">
+                            <option value="">— None (Admin / No filter) —</option>
+                        </select>
+                        <small style="color:var(--text-muted);font-size:0.75rem;">Jobs assigned to this contractor will be visible to this staff member.</small>
+                    </div>
+                </div>
                 <div class="modal-actions">
                     <button type="button" class="btn btn-secondary" onclick="closeModal('user-modal')">Cancel</button>
                     <button type="submit" class="btn btn-primary">Save User</button>

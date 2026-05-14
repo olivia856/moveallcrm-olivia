@@ -108,9 +108,9 @@ const db = {
 // ============================================================
 const supabaseAuth = {
     async login(email, password) {
-        // Fetch user by email
+        // Fetch user by email (including contractor_name for staff job filtering)
         const res = await fetch(
-            `${SUPABASE_URL}/rest/v1/users?email=eq.${encodeURIComponent(email)}&select=id,name,email,role,phone,password_hash&limit=1`,
+            `${SUPABASE_URL}/rest/v1/users?email=eq.${encodeURIComponent(email)}&select=id,name,email,role,phone,password_hash,contractor_name&limit=1`,
             { headers: db._headers() }
         );
         if (!res.ok) throw new Error('Login failed');
@@ -119,8 +119,7 @@ const supabaseAuth = {
 
         const user = users[0];
 
-        // Verify bcrypt password via Edge Function (or RPC if available)
-        // Since we can't run bcrypt in browser, we use Supabase RPC
+        // Verify bcrypt password via Supabase RPC
         const verifyRes = await fetch(`${SUPABASE_URL}/rest/v1/rpc/verify_password`, {
             method: 'POST',
             headers: db._headers(),
@@ -131,8 +130,15 @@ const supabaseAuth = {
         const verified = await verifyRes.json();
         if (!verified) throw new Error('Invalid email or password.');
 
-        // Store session
-        const sessionUser = { id: user.id, name: user.name, email: user.email, role: user.role, phone: user.phone || null };
+        // Store session — include contractor_name so job filter works immediately
+        const sessionUser = {
+            id: user.id,
+            name: user.name,
+            email: user.email,
+            role: user.role,
+            phone: user.phone || null,
+            contractor_name: user.contractor_name || null
+        };
         localStorage.setItem('movehome_user', JSON.stringify(sessionUser));
         return sessionUser;
     },

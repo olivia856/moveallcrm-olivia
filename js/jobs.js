@@ -212,7 +212,13 @@ async function loadJobsData() {
 
         const user = (typeof getCurrentUser === 'function') ? getCurrentUser() : null;
         if (user && user.role !== 'admin') {
-            jobs = jobs.filter(j => j.team && j.team.toLowerCase().includes(user.name.toLowerCase()));
+            // Staff only see jobs assigned to their linked contractor company
+            if (user.contractor_name) {
+                jobs = jobs.filter(j => j.contractor && j.contractor === user.contractor_name);
+            } else {
+                // Staff with no contractor linked — show nothing (safety fallback)
+                jobs = [];
+            }
         }
 
         // Apply client-side filters
@@ -268,7 +274,11 @@ function startCalendarRefresh() {
                 let jobs = res.data || [];
                 const user = (typeof getCurrentUser === 'function') ? getCurrentUser() : null;
                 if (user && user.role !== 'admin') {
-                    jobs = jobs.filter(j => j.team && j.team.toLowerCase().includes(user.name.toLowerCase()));
+                    if (user.contractor_name) {
+                        jobs = jobs.filter(j => j.contractor && j.contractor === user.contractor_name);
+                    } else {
+                        jobs = [];
+                    }
                 }
                 allJobsCache = jobs;
                 renderCalendarView(allJobsCache);

@@ -2,12 +2,35 @@
 
 let currentUsersPage = 1;
 const USERS_PER_PAGE = 10;
+let usersContractorsCache = [];
 
 // Helper: get/set form values by element ID
 function getUserVal(id) { const el = document.getElementById(id); return el ? el.value : ''; }
 function setUserVal(id, v) { const el = document.getElementById(id); if (el) el.value = v || ''; }
 
+async function loadContractorsForUsers() {
+    try {
+        const res = await api.get('/contractors', { limit: 200 });
+        if (res.success) {
+            usersContractorsCache = res.data || [];
+            populateUserContractorDropdown();
+        }
+    } catch(e) { console.warn('Could not load contractors for users', e); }
+}
+
+function populateUserContractorDropdown() {
+    const sel = document.getElementById('user-contractor-input');
+    if (!sel) return;
+    const current = sel.value;
+    sel.innerHTML = '<option value="">— None (Admin / No filter) —</option>' +
+        usersContractorsCache.map(c =>
+            `<option value="${escapeHtml(c.company)}">${escapeHtml(c.company)}</option>`
+        ).join('');
+    if (current) sel.value = current;
+}
+
 async function loadUsersData() {
+    await loadContractorsForUsers();
     try {
         const res = await api.get('/users', { limit: 200 });
         if (!res.success) { showToast('Error', res.error || 'Failed to load users', 'error'); return; }
@@ -54,7 +77,8 @@ function renderUsersTable(users) {
             <td>${escapeHtml(u.name || '—')}</td>
             <td>${escapeHtml(u.phone || '—')}</td>
             <td>${escapeHtml(u.email || '—')}</td>
-            <td><span class="role-badge role-${u.role}">${u.role}</span></td>
+            <td><span class="role-badge role-${u.role}">${u.role ? u.role.toUpperCase() : '—'}</span></td>
+            <td>${u.contractor_name ? `<span style="background:rgba(99,102,241,.15);color:#a5b4fc;padding:3px 10px;border-radius:6px;font-size:0.78rem;font-weight:600;">${escapeHtml(u.contractor_name)}</span>` : '<span style="color:var(--text-muted);font-size:0.8rem;">—</span>'}</td>
             <td class="actions-cell">
                 <button class="btn btn-sm btn-outline" onclick="editUser(${u.id})">Edit</button>
                 <button class="btn btn-sm btn-danger" onclick="deleteUser(${u.id})">Delete</button>
@@ -67,6 +91,7 @@ function renderUsersTable(users) {
 
 async function editUser(id) {
     try {
+        await loadContractorsForUsers();
         const res = await api.get(`/users/${id}`);
         if (!res.success) { showToast('Error', 'User not found', 'error'); return; }
         const u = res.data;
@@ -76,20 +101,41 @@ async function editUser(id) {
         setUserVal('user-phone-input', u.phone);
         setUserVal('user-email-input', u.email);
         setUserVal('user-password-input', '');
+        // Set role
+        const roleSel = document.getElementById('user-role-input');
+        if (roleSel) roleSel.value = u.role || 'staff';
+        // Set linked contractor (after dropdown is populated)
+        setTimeout(() => {
+            const cSel = document.getElementById('user-contractor-input');
+            if (cSel) cSel.value = u.contractor_name || '';
+        }, 50);
         openModal('user-modal');
     } catch (err) {
         showToast('Error', 'Failed to load user', 'error');
     }
 }
 
+async function openAddUserModal() {
+    await loadContractorsForUsers();
+    document.getElementById('user-modal-title').textContent = 'Add New App User';
+    document.getElementById('user-id').value = '';
+    document.getElementById('user-form').reset();
+    const roleSel = document.getElementById('user-role-input');
+    if (roleSel) roleSel.value = 'staff';
+    const cSel = document.getElementById('user-contractor-input');
+    if (cSel) cSel.value = '';
+    openModal('user-modal');
+}
+
 async function saveUser(e) {
     e.preventDefault();
     const editId = getUserVal('user-id');
     const data = {
-        name:  getUserVal('user-name-input'),
-        phone: getUserVal('user-phone-input'),
-        email: getUserVal('user-email-input'),
-        role:  getUserVal('user-role-input') || 'staff'
+        name:            getUserVal('user-name-input'),
+        phone:           getUserVal('user-phone-input'),
+        email:           getUserVal('user-email-input'),
+        role:            getUserVal('user-role-input') || 'staff',
+        contractor_name: getUserVal('user-contractor-input') || null
     };
     const password = getUserVal('user-password-input');
     if (password) data.password = password;
