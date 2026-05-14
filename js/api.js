@@ -17,7 +17,7 @@ const api = {
         const { status, search, category, limit = 50, offset = 0, view, entity_type, action } = params || {};
 
         const opts = {
-            columns: table === 'users' ? 'id,name,phone,email,role,created_at,updated_at' : '*',
+            columns: table === 'users' ? 'id,name,phone,email,role,contractor_name,created_at,updated_at' : '*',
             filters: {},
             search,
             searchCols: this._searchCols(parts[0]),
