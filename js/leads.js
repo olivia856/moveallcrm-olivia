@@ -352,9 +352,11 @@ function timeAgo(dateStr) {
 
 function truncate(str, n) { if (!str) return '—'; return str.length > n ? str.slice(0, n) + '…' : str; }
 
-function smsBadge(value) {
+function smsBadge(leadId, value, action) {
     const sent = value === 'sent';
-    return `<span class="sms-inline-badge ${sent ? 'sms-ib-sent' : 'sms-ib-not'}">${sent ? '✓ Sent' : 'Not Sent'}</span>`;
+    return `<span class="sms-inline-badge ${sent ? 'sms-ib-sent' : 'sms-ib-not'}" 
+                  onclick="triggerFromMenu(${leadId}, '${action}')" 
+                  style="cursor:pointer;" title="Click to send ${ACTION_LABELS[action]}">${sent ? '✓ Sent' : 'Not Sent'}</span>`;
 }
 
 function leadSourceBadge(src) {
@@ -440,10 +442,10 @@ function showLeadMenu(btn, leadId, phone, email, leadName) {
 async function triggerFromMenu(leadId, action, phone, email) {
     closeCtxMenu();
     const label = ACTION_LABELS[action] || action;
-    if (!confirm(`Send "${label}" ?`)) return;
+    if (!confirm(`Send "${label}" ?`)) return false;
     showToast('Sending…', `Triggering ${label}…`, 'info');
     try {
-        const user = supabaseAuth.getUser();
+        const user = supabaseAuth?.getUser?.() || null;
         const res = await fetch('/api/webhooks/trigger', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -467,11 +469,14 @@ async function triggerFromMenu(leadId, action, phone, email) {
                 }
             }
             loadLeadsData();
+            return true;
         } else {
             showToast('Failed', result.error || `${label} failed`, 'error');
+            return false;
         }
     } catch (err) {
         showToast('Error', 'Failed to trigger action', 'error');
+        return false;
     }
 }
 
@@ -596,12 +601,39 @@ function buildEmailSentSelect(leadId, currentValue) {
     const opts = EMAIL_SENT_OPTIONS.map(opt => 
         `<option value="${opt.value}" ${opt.value === val ? 'selected' : ''}>${opt.label}</option>`
     ).join('');
-    return `<select class="inline-select"
+    return `<select class="inline-select" data-original="${val}"
         style="background:${color}22;color:${color};border:1px solid ${color}60;font-size:0.75rem;max-width:130px;min-width:115px;text-align:center"
-        onchange="inlineSave(${leadId},'email_booking_sent',this.value);updateEmailColor(this)">
+        onchange="handleEmailSelectChange(${leadId}, this)">
         ${opts}
     </select>`;
 }
+
+async function handleEmailSelectChange(leadId, selectEl) {
+    const val = selectEl.value;
+    const oldVal = selectEl.getAttribute('data-original') || 'not_sent';
+    
+    if (val === 'not_sent') {
+        await inlineSave(leadId, 'email_booking_sent', val);
+        selectEl.setAttribute('data-original', val);
+        updateEmailColor(selectEl);
+        return;
+    }
+    
+    const action = val === 'email_2m' ? 'email_2m_booking' : 'email_3m_booking';
+    
+    // Call triggerFromMenu which returns true if successful
+    const success = await triggerFromMenu(leadId, action);
+    
+    if (!success) {
+        // Revert back if cancelled or failed
+        selectEl.value = oldVal;
+        updateEmailColor(selectEl);
+    } else {
+        selectEl.setAttribute('data-original', val);
+        updateEmailColor(selectEl);
+    }
+}
+
 function updateEmailColor(sel) {
     let color = '#6b7280';
     if (sel.value === 'email_2m') color = '#3b82f6';
@@ -746,11 +778,11 @@ function renderLeadsTable(leads) {
             <td>${editableCell(l.id,'rough_size',l.rough_size,'text','90px')}</td>
             <td style="min-width:140px">${buildFieldSelect(l.id, 'access_issues', l.access_issues, dropdownOptions.access_issues, true)}</td>
             <td style="min-width:140px">${buildFieldSelect(l.id, 'heavy_items', l.heavy_items, dropdownOptions.heavy_items, true)}</td>
-            <td>${smsBadge(l.sms_no_ans)}</td>
-            <td>${smsBadge(l.sms_after_hours)}</td>
-            <td>${smsBadge(l.sms_1st_checkin)}</td>
-            <td>${smsBadge(l.sms_2nd_nudge)}</td>
-            <td>${smsBadge(l.sms_3rd_final)}</td>
+            <td>${smsBadge(l.id, l.sms_no_ans, 'sms_no_answer')}</td>
+            <td>${smsBadge(l.id, l.sms_after_hours, 'sms_after_hours')}</td>
+            <td>${smsBadge(l.id, l.sms_1st_checkin, 'sms_1st_checkin')}</td>
+            <td>${smsBadge(l.id, l.sms_2nd_nudge, 'sms_2nd_nudge')}</td>
+            <td>${smsBadge(l.id, l.sms_3rd_final, 'sms_3rd_final')}</td>
             <td>${editableCell(l.id,'sms_replies',l.sms_replies,'text','110px')}</td>
             <td>${buildEmailSentSelect(l.id, l.email_booking_sent)}</td>
             <td style="white-space:nowrap;color:var(--text-muted);font-size:0.78rem">${leadMonth}</td>

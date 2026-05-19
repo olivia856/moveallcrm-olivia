@@ -75,9 +75,19 @@ async function trigger(action, data) {
  * Format: WEBHOOK_{ACTION_UPPERCASE}_URL
  * Falls back to N8N_WEBHOOK_URL if specific one not set.
  */
+const WEBHOOK_LINKS = {
+    sms_no_answer: 'https://n8n.n8k5q.space/webhook/08c85a0c-178d-4957-a5db-b4a4ffbc9b',
+    sms_after_hours: 'https://n8n.n8k5q.space/webhook/08c85a0c-178d-4957-a5db-b4a4ffbc9b',
+    sms_1st_checkin: 'https://n8n.n8k5q.space/webhook/08c85a0c-178d-4957-a5db-b4a4ffbc',
+    sms_2nd_nudge: 'https://n8n.n8k5q.space/webhook/08c85a0c-178d-4957-a5db-b4a4',
+    sms_3rd_final: 'https://n8n.n8k5q.space/webhook/08c85a0c-178d-4957-a5db-b4',
+    email_2m_booking: 'https://n8n.n8k5q.space/webhook/0600069f-3d23-4284-92cf-1b18a1ee0a74',
+    email_3m_booking: 'https://n8n.n8k5q.space/webhook/b49d5d57-6fdc-4a00-a171-de12a60f2fd0'
+};
+
 function getWebhookUrl(action) {
     const envKey = `WEBHOOK_${action.toUpperCase()}_URL`;
-    return process.env[envKey] || config.n8n.webhookUrl || null;
+    return process.env[envKey] || WEBHOOK_LINKS[action] || config.n8n.webhookUrl || null;
 }
 
 /**
