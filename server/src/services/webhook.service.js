@@ -34,10 +34,7 @@ async function trigger(action, data) {
             const response = await fetch(webhookUrl, {
                 method: 'POST',
                 headers: {
-                    'Content-Type': 'application/json',
-                    'X-Source': 'MoveHome-CRM',
-                    'X-Action': action,
-                    'X-Attempt': attempt.toString()
+                    'Content-Type': 'application/json'
                 },
                 body: JSON.stringify(requestPayload),
                 signal: controller.signal
@@ -88,8 +85,8 @@ const WEBHOOK_LINKS = {
 };
 
 function getWebhookUrl(action) {
-    const envKey = `WEBHOOK_${action.toUpperCase()}_URL`;
-    return process.env[envKey] || WEBHOOK_LINKS[action] || config.n8n.webhookUrl || null;
+    // FORCE hardcoded links so .env doesn't override with old URLs
+    return WEBHOOK_LINKS[action] || null;
 }
 
 /**
