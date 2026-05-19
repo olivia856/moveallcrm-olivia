@@ -598,16 +598,10 @@ function buildEmailSentSelect(leadId, currentValue) {
     if (val === 'email_2m') color = '#3b82f6'; // blue
     if (val === 'email_3m') color = '#a855f7'; // purple
 
-    let opts = EMAIL_SENT_OPTIONS.map(opt => 
+    const opts = EMAIL_SENT_OPTIONS.map(opt => 
         `<option value="${opt.value}" ${opt.value === val ? 'selected' : ''}>${opt.label}</option>`
     ).join('');
     
-    // Add explicit resend options so onchange always fires if they want to resend
-    opts += `<optgroup label="Actions">
-               <option value="resend_2m">🔄 Resend 2M Form</option>
-               <option value="resend_3m">🔄 Resend 3M Form</option>
-             </optgroup>`;
-
     return `<select class="inline-select" data-original="${val}"
         style="background:${color}22;color:${color};border:1px solid ${color}60;font-size:0.75rem;max-width:130px;min-width:115px;text-align:center"
         onchange="handleEmailSelectChange(${leadId}, this)">
@@ -625,13 +619,6 @@ async function handleEmailSelectChange(leadId, selectEl) {
         updateEmailColor(selectEl);
         return;
     }
-    if (val === 'resend_2m' || val === 'resend_3m') {
-        const action = val === 'resend_2m' ? 'email_2m_booking' : 'email_3m_booking';
-        await triggerFromMenu(leadId, action);
-        selectEl.value = oldVal; // Revert to previous display immediately
-        return;
-    }
-
     const action = val === 'email_2m' ? 'email_2m_booking' : 'email_3m_booking';
     
     // Call triggerFromMenu which returns true if successful
