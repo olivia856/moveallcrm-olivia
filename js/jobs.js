@@ -59,8 +59,8 @@ function setSelectValSafe(id, v) {
     el.value = v;
 }
 
-function addCustomModalOption(selectId, fieldName) {
-    const val = prompt(`Enter custom value for ${fieldName}:`);
+async function addCustomModalOption(selectId, fieldName) {
+    const val = await appPrompt(`Enter custom value for ${fieldName}:`);
     if (val && val.trim()) {
         setSelectValSafe(selectId, val.trim());
     }
@@ -683,8 +683,8 @@ function renderMasterView(jobs) {
             <td style="min-width:120px">${jobEditCell(j.id,'move_out',j.move_out,'150px')}</td>
             <td style="min-width:120px">${jobEditCell(j.id,'move_in',j.move_in,'150px')}</td>
             <td style="min-width:90px">${jobEditCell(j.id,'phone',j.phone,'100px')}</td>
-            <td><span class="sms-badge sms-${j.on_way_sms}">${j.on_way_sms === 'sent' ? '✓ Sent' : '✗ Not Sent'}</span></td>
-            <td><span class="sms-badge sms-${j.last_sms}">${j.last_sms === 'sent' ? '✓ Sent' : '✗ Not Sent'}</span></td>
+            <td>${jobSmsBadge(j.id, j.on_way_sms, 'on_way_sms')}</td>
+            <td>${jobSmsBadge(j.id, j.last_sms, 'late_sms')}</td>
             ${isAdmin() ? `<td style="min-width:100px">${escapeHtml(j.time_sheet || '—')}</td>` : ''}
             ${isAdmin() ? `<td style="min-width:90px">$${parseFloat(j.sell_price || 0).toFixed(0)}</td>` : ''}
             ${isAdmin() ? `<td style="min-width:90px">$${parseFloat(j.buy_price || 0).toFixed(0)}</td>` : ''}
@@ -708,6 +708,52 @@ function renderMasterView(jobs) {
     }).join('');
 
     renderPagination('jobs-pagination', currentJobsPage, totalPages, (p) => { currentJobsPage = p; loadJobsData(); });
+}
+
+function jobSmsBadge(jobId, value, action) {
+    const sent = value === 'sent';
+    const label = action === 'on_way_sms' ? 'On Way SMS' : 'Late SMS';
+    return `<span class="sms-badge sms-${value} clickable-badge" 
+                  onclick="triggerJobWebhook(${jobId}, '${action}')" 
+                  style="cursor:pointer;" title="Click to send ${label}">${sent ? '✓ Sent' : '✗ Not Sent'}</span>`;
+}
+
+async function triggerJobWebhook(jobId, action) {
+    const label = action === 'on_way_sms' ? 'On Way SMS' : 'Late SMS';
+    if (!await appConfirm(`Send "${label}" ?`)) return false;
+    showToast('Sending…', `Triggering ${label}…`, 'info');
+    try {
+        const user = typeof supabaseAuth !== 'undefined' && supabaseAuth.getUser ? supabaseAuth.getUser() : null;
+        const res = await fetch('/api/webhooks/trigger', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                action, 
+                leadId: jobId,
+                entityType: 'job',
+                triggered_by:       user?.name  || 'Staff',
+                triggered_by_email: user?.email || '',
+                triggered_by_role:  user?.role  || 'staff'
+            })
+        });
+        const result = await res.json();
+        if (result.success) {
+            showToast('Sent!', `"${label}" triggered.`, 'success');
+            if (action === 'on_way_sms') {
+                await inlineJobSave(jobId, 'on_way_sms', 'sent');
+            } else if (action === 'late_sms') {
+                await inlineJobSave(jobId, 'last_sms', 'sent');
+            }
+            loadJobsData();
+            return true;
+        } else {
+            showToast('Failed', result.error || `${label} failed`, 'error');
+            return false;
+        }
+    } catch (err) {
+        showToast('Error', 'Failed to trigger action', 'error');
+        return false;
+    }
 }
 
 
@@ -1029,7 +1075,7 @@ async function saveJob(e) {
 }
 
 async function deleteJob(id) {
-    if (!confirm('Delete this job?')) return;
+    if (!await appConfirm('Delete this job?')) return;
     try {
         const res = await api.del(`/jobs/${id}`);
         if (res.success) { showToast('Deleted', 'Job removed', 'success'); loadJobsData(); }
@@ -1040,7 +1086,7 @@ async function deleteJob(id) {
 }
 
 async function archiveJob(id) {
-    if (!confirm('Archive this job?')) return;
+    if (!await appConfirm('Archive this job?')) return;
     try {
         const res = await api.put(`/jobs/${id}`, { status: 'archived' });
         if (res.success) {
@@ -1257,3 +1303,5 @@ async function saveJobTimes() {
         showToast('Error', 'Failed to update job times', 'error');
     }
 }
+
+

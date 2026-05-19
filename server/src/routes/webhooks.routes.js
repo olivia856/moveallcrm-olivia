@@ -30,34 +30,33 @@ router.get('/config', authenticate, (req, res) => {
 // POST /api/webhooks/trigger - NO auth required (called from browser, proxied to n8n)
 router.post('/trigger', async (req, res, next) => {
     try {
-        const { action, leadId } = req.body;
+        const { action, leadId, entityType } = req.body;
+        const type = entityType || 'lead';
 
         if (!action || !leadId) {
             return res.status(400).json({ success: false, error: 'action and leadId are required' });
         }
 
-        // Fetch the lead from Supabase
-        const { data: leads, error: fetchErr } = await supabase
-            .from('leads')
+        // Fetch the entity from Supabase
+        const table = type === 'job' ? 'jobs' : 'leads';
+        const { data: records, error: fetchErr } = await supabase
+            .from(table)
             .select('*')
             .eq('id', leadId)
             .limit(1);
 
-        if (fetchErr || !leads || leads.length === 0) {
-            return res.status(404).json({ success: false, error: 'Lead not found' });
+        if (fetchErr || !records || records.length === 0) {
+            return res.status(404).json({ success: false, error: `${type} not found` });
         }
 
-        const lead = leads[0];
+        const record = records[0];
         const label = ACTION_LABELS[action] || action;
 
-        // Build payload — entire lead row + action metadata
+        // Build payload
         const payload = {
-            // Action info
             action_key:         action,
             action_label:       label,
-            // All lead columns from the table
-            ...lead,
-            // Who triggered it
+            ...record,
             triggered_by:       req.body.triggered_by       || 'Staff',
             triggered_by_email: req.body.triggered_by_email || '',
             triggered_by_role:  req.body.triggered_by_role  || 'staff',
@@ -68,29 +67,31 @@ router.post('/trigger', async (req, res, next) => {
         // Fire the webhook
         const webhookResult = await webhook.trigger(action, payload);
 
-        // Tag lead with last SMS/Email action
+        // Tag entity with last SMS/Email action
         try {
-            if (action.startsWith('sms_')) {
-                await supabase
-                    .from('leads')
-                    .update({ last_sms_action: label, last_sms_at: new Date().toISOString(), updated_at: new Date().toISOString() })
-                    .eq('id', leadId);
-            } else if (action.startsWith('email_')) {
-                await supabase
-                    .from('leads')
-                    .update({ last_email_action: label, last_email_at: new Date().toISOString(), updated_at: new Date().toISOString() })
-                    .eq('id', leadId);
+            if (type === 'lead') {
+                if (action.startsWith('sms_')) {
+                    await supabase.from('leads').update({ last_sms_action: label, last_sms_at: new Date().toISOString(), updated_at: new Date().toISOString() }).eq('id', leadId);
+                } else if (action.startsWith('email_')) {
+                    await supabase.from('leads').update({ last_email_action: label, last_email_at: new Date().toISOString(), updated_at: new Date().toISOString() }).eq('id', leadId);
+                }
+            } else if (type === 'job') {
+                if (action === 'on_way_sms') {
+                    await supabase.from('jobs').update({ on_way_sms: 'sent' }).eq('id', leadId);
+                } else if (action === 'late_sms') {
+                    await supabase.from('jobs').update({ last_sms: 'sent' }).eq('id', leadId);
+                }
             }
         } catch (tagErr) {
-            console.error('Failed to tag lead:', tagErr.message);
+            console.error('Failed to tag entity:', tagErr.message);
         }
 
         // Log to activity_logs
         try {
             await supabase.from('activity_logs').insert({
                 action:      `webhook_${action}`,
-                entity_type: 'lead',
-                entity_id:   lead.id,
+                entity_type: type,
+                entity_id:   record.id,
                 details:     JSON.stringify({ action, label, success: webhookResult.success })
             });
         } catch (logErr) {

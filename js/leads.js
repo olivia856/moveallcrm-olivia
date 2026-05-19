@@ -130,7 +130,7 @@ async function addComment() {
 }
 
 async function deleteComment(id) {
-    if (!confirm('Delete this comment?')) return;
+    if (!await appConfirm('Delete this comment?')) return;
     try {
         const res = await fetch(`${db._url}/rest/v1/lead_comments?id=eq.${id}`, {
             method: 'DELETE',
@@ -153,7 +153,7 @@ async function deleteComment(id) {
 }
 
 async function editSingleComment(id, currentText) {
-    const newText = prompt("Edit your comment:", currentText);
+    const newText = await appPrompt("Edit your comment:", currentText);
     if (newText === null || newText.trim() === currentText || !newText.trim()) return;
     
     try {
@@ -442,7 +442,7 @@ function showLeadMenu(btn, leadId, phone, email, leadName) {
 async function triggerFromMenu(leadId, action, phone, email) {
     closeCtxMenu();
     const label = ACTION_LABELS[action] || action;
-    if (!confirm(`Send "${label}" ?`)) return false;
+    if (!await appConfirm(`Send "${label}" ?`)) return false;
     showToast('Sending…', `Triggering ${label}…`, 'info');
     try {
         const user = supabaseAuth?.getUser?.() || null;
@@ -945,7 +945,7 @@ async function saveLead(e) {
 }
 
 async function deleteLead(id) {
-    if (!confirm('Delete this lead?')) return;
+    if (!await appConfirm('Delete this lead?')) return;
     try {
         const res = await api.del(`/leads/${id}`);
         if (res.success) { showToast('Deleted', 'Lead removed', 'success'); loadLeadsData(); }
@@ -955,7 +955,7 @@ async function deleteLead(id) {
 
 // ─── Admin: add dropdown option ───────────────────────────────────────────────
 async function addDropdownOption(fieldName) {
-    const value = prompt(`Add new option for "${fieldName.replace(/_/g,' ')}":`);
+    const value = await appPrompt(`Add new option for "${fieldName.replace(/_/g,' ')}":`);
     if (!value?.trim()) return;
     try {
         const res = await fetch('/api/dropdown-options', {
@@ -980,7 +980,7 @@ async function triggerLeadWebhook(action) {
     const leadId = getVal('lead-id');
     if (!leadId) { showToast('Error', 'No lead selected', 'error'); return; }
     const label = ACTION_LABELS[action] || action;
-    if (!confirm(`Send "${label}" to this lead?`)) return;
+    if (!await appConfirm(`Send "${label}" to this lead?`)) return;
     showToast('Sending…', `Triggering ${label}…`, 'info');
     try {
         const user = supabaseAuth.getUser();
@@ -1016,3 +1016,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
     });
 });
+
+
+

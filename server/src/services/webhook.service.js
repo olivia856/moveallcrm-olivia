@@ -82,7 +82,9 @@ const WEBHOOK_LINKS = {
     sms_2nd_nudge: 'https://n8n.n8k5q.space/webhook/08c85a0c-178d-4957-a5db-b4a4',
     sms_3rd_final: 'https://n8n.n8k5q.space/webhook/08c85a0c-178d-4957-a5db-b4',
     email_2m_booking: 'https://n8n.n8k5q.space/webhook/0600069f-3d23-4284-92cf-1b18a1ee0a74',
-    email_3m_booking: 'https://n8n.n8k5q.space/webhook/b49d5d57-6fdc-4a00-a171-de12a60f2fd0'
+    email_3m_booking: 'https://n8n.n8k5q.space/webhook/b49d5d57-6fdc-4a00-a171-de12a60f2fd0',
+    on_way_sms: 'https://n8n.n8k5q.space/webhook/08c85a0c-178d-4957-a5db-b4a4ff',
+    late_sms: 'https://n8n.n8k5q.space/webhook/08c85a0c-178d-4957-a5db'
 };
 
 function getWebhookUrl(action) {

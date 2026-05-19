@@ -145,6 +145,53 @@ function closeModal(id) {
     if (form) form.reset();
 }
 
+function appConfirm(message) {
+    return new Promise(resolve => {
+        document.getElementById('custom-confirm-message').textContent = message;
+        openModal('custom-confirm-modal');
+        
+        const btnOk = document.getElementById('custom-confirm-ok');
+        const btnCancel = document.getElementById('custom-confirm-cancel');
+        
+        const cleanup = () => {
+            btnOk.onclick = null;
+            btnCancel.onclick = null;
+            closeModal('custom-confirm-modal');
+        };
+        
+        btnOk.onclick = () => { cleanup(); resolve(true); };
+        btnCancel.onclick = () => { cleanup(); resolve(false); };
+    });
+}
+
+function appPrompt(message, defaultValue = '') {
+    return new Promise(resolve => {
+        document.getElementById('custom-prompt-message').textContent = message;
+        const input = document.getElementById('custom-prompt-input');
+        input.value = defaultValue;
+        openModal('custom-prompt-modal');
+        input.focus();
+        input.select();
+        
+        const btnOk = document.getElementById('custom-prompt-ok');
+        const btnCancel = document.getElementById('custom-prompt-cancel');
+        
+        const cleanup = () => {
+            btnOk.onclick = null;
+            btnCancel.onclick = null;
+            input.onkeydown = null;
+            closeModal('custom-prompt-modal');
+        };
+        
+        btnOk.onclick = () => { cleanup(); resolve(input.value); };
+        btnCancel.onclick = () => { cleanup(); resolve(null); };
+        input.onkeydown = (e) => {
+            if (e.key === 'Enter') { e.preventDefault(); cleanup(); resolve(input.value); }
+            if (e.key === 'Escape') { e.preventDefault(); cleanup(); resolve(null); }
+        };
+    });
+}
+
 function openCreateModal(id) {
     // Reset the title to "Add" mode
     const titleMap = {

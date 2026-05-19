@@ -198,7 +198,7 @@ async function saveStorage(e) {
 }
 
 async function deleteStorage(id) {
-    if (!confirm('Delete this storage plan?')) return;
+    if (!await appConfirm('Delete this storage plan?')) return;
     try {
         const res = await api.del(`/storage/${id}`);
         if (res.success) { showToast('Deleted', 'Storage plan removed', 'success'); loadStorageData(); }
@@ -209,7 +209,7 @@ async function deleteStorage(id) {
 }
 
 async function archiveStorage(id) {
-    if (!confirm('Move this storage plan to archive?')) return;
+    if (!await appConfirm('Move this storage plan to archive?')) return;
     try {
         const res = await api.put(`/storage/${id}`, { status: 'archived' });
         if (res.success) { showToast('Archived', 'Storage plan archived', 'success'); loadStorageData(); }
@@ -280,3 +280,5 @@ async function saveStorageComment() {
         showToast('Error', 'Network error', 'error');
     }
 }
+
+

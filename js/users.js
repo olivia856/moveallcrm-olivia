@@ -167,7 +167,7 @@ async function saveUser(e) {
 }
 
 async function deleteUser(id) {
-    if (!confirm('Delete this user?')) return;
+    if (!await appConfirm('Delete this user?')) return;
     try {
         const res    = await fetch(`/api/users/${id}`, { method: 'DELETE' });
         const result = await res.json();
@@ -177,3 +177,4 @@ async function deleteUser(id) {
         showToast('Error', 'Failed to delete user', 'error');
     }
 }
+

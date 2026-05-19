@@ -141,7 +141,7 @@ async function saveContractor(e) {
 }
 
 async function deleteContractor(id) {
-    if (!confirm('Delete this contractor?')) return;
+    if (!await appConfirm('Delete this contractor?')) return;
     try {
         const res = await api.del(`/contractors/${id}`);
         if (res.success) { showToast('Deleted', 'Contractor removed', 'success'); loadContractorsData(); }
@@ -163,3 +163,4 @@ function toggleContractorMenu(id, e) {
 document.addEventListener('click', () => {
     document.querySelectorAll('.contractor-action-menu').forEach(el => el.classList.add('hidden'));
 });
+

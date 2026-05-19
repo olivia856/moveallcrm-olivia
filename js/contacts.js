@@ -141,7 +141,7 @@ async function saveContact(e) {
 }
 
 async function deleteContact(id) {
-    if (!confirm('Delete this contact?')) return;
+    if (!await appConfirm('Delete this contact?')) return;
     try {
         const res = await api.del(`/contacts/${id}`);
         if (res.success) { showToast('Deleted', 'Contact removed', 'success'); loadContactsData(); }
@@ -163,3 +163,4 @@ function toggleContactMenu(id, e) {
 document.addEventListener('click', () => {
     document.querySelectorAll('.contact-action-menu').forEach(el => el.classList.add('hidden'));
 });
+

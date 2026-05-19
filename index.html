@@ -651,6 +651,33 @@
     <!-- MODALS                                       -->
     <!-- ============================================ -->
 
+    <!-- Custom Confirm Modal -->
+    <div class="modal-overlay hidden" id="custom-confirm-modal" style="z-index: 100000;">
+        <div class="modal" style="max-width:400px; padding: 24px; text-align: center;">
+            <div style="margin-bottom: 20px; font-size: 1.1rem; color: var(--text-primary);" id="custom-confirm-message">
+                Are you sure?
+            </div>
+            <div style="display:flex;justify-content:center;gap:12px">
+                <button class="btn btn-secondary" id="custom-confirm-cancel">Cancel</button>
+                <button class="btn btn-primary" id="custom-confirm-ok">Confirm</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Custom Prompt Modal -->
+    <div class="modal-overlay hidden" id="custom-prompt-modal" style="z-index: 100000;">
+        <div class="modal" style="max-width:400px; padding: 24px;">
+            <div style="margin-bottom: 12px; font-size: 1.1rem; color: var(--text-primary); text-align: center;" id="custom-prompt-message">
+                Enter value:
+            </div>
+            <input type="text" id="custom-prompt-input" style="width:100%; padding: 8px 12px; margin-bottom: 20px; border-radius: 6px; border: 1px solid var(--border-color); background: var(--bg-base); color: var(--text-primary);">
+            <div style="display:flex;justify-content:center;gap:12px">
+                <button class="btn btn-secondary" id="custom-prompt-cancel">Cancel</button>
+                <button class="btn btn-primary" id="custom-prompt-ok">Confirm</button>
+            </div>
+        </div>
+    </div>
+
     <div class="modal-overlay hidden" id="job-comment-modal">
         <div class="modal" style="max-width:500px">
             <div class="modal-header">
