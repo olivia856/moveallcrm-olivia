@@ -73,15 +73,15 @@ async function trigger(action, data) {
  * Falls back to N8N_WEBHOOK_URL if specific one not set.
  */
 const WEBHOOK_LINKS = {
-    sms_no_answer: 'https://n8n.n8k5q.space/webhook/08c85a0c-178d-4957-a5db-b4a4ffbc9b',
-    sms_after_hours: 'https://n8n.n8k5q.space/webhook/08c85a0c-178d-4957-a5db-b4a4ffbc9b',
-    sms_1st_checkin: 'https://n8n.n8k5q.space/webhook/08c85a0c-178d-4957-a5db-b4a4ffbc',
-    sms_2nd_nudge: 'https://n8n.n8k5q.space/webhook/08c85a0c-178d-4957-a5db-b4a4',
-    sms_3rd_final: 'https://n8n.n8k5q.space/webhook/08c85a0c-178d-4957-a5db-b4',
-    email_2m_booking: 'https://n8n.n8k5q.space/webhook/0600069f-3d23-4284-92cf-1b18a1ee0a74',
-    email_3m_booking: 'https://n8n.n8k5q.space/webhook/b49d5d57-6fdc-4a00-a171-de12a60f2fd0',
-    on_way_sms: 'https://n8n.n8k5q.space/webhook/08c85a0c-178d-4957-a5db-b4a4ff',
-    late_sms: 'https://n8n.n8k5q.space/webhook/08c85a0c-178d-4957-a5db'
+    sms_no_answer: 'https://n8n.n8k5q.space/webhook/e9f77d9b-c4da-4fea-9a1f-09fbc07a3d80',
+    sms_after_hours: 'https://n8n.n8k5q.space/webhook/14f5c15d-2390-4361-ab8f-92cf25a5f846',
+    sms_1st_checkin: 'https://n8n.n8k5q.space/webhook/c5116f54-7b70-4887-b898-bfcdfe1fa6a1',
+    sms_2nd_nudge: 'https://n8n.n8k5q.space/webhook/2822fc2b-ddfa-45bf-bd0c-6662b1e6c12a',
+    sms_3rd_final: 'https://n8n.n8k5q.space/webhook/2822fc2b-ddfa-45bf-bd0c-6662b1e6c12a',
+    email_2m_booking: 'https://n8n.n8k5q.space/webhook/1c875952-54e5-4435-a970-67dc95905277',
+    email_3m_booking: 'https://n8n.n8k5q.space/webhook/c1bc6abd-d239-46ac-ab55-7f8c58bd99d3',
+    on_way_sms: 'https://n8n.n8k5q.space/webhook/ab017c31-2726-499f-b8e7-86ff77f9a77e',
+    late_sms: 'https://n8n.n8k5q.space/webhook/cb1e7238-a642-4e53-86a2-1c8893cb459e'
 };
 
 function getWebhookUrl(action) {
