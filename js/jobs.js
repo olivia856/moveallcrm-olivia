@@ -69,6 +69,7 @@ async function addCustomModalOption(selectId, fieldName) {
 // ─── Brand Picker ─────────────────────────────────────────────────────────────
 let _selectedBrand = '';
 let _jobIsEdit = false;
+let _prefilledDate = '';
 
 const BRAND_BANNERS = {
     MoveAll: {
@@ -117,6 +118,10 @@ function openJobBrandPicker(brand) {
         if (prevBtn) prevBtn.style.display = 'inline-flex';
         applyBrandBanner(brand);
         populateContractorDropdown();
+        if (_prefilledDate) {
+            setJobVal('job-move-date', _prefilledDate);
+            _prefilledDate = '';
+        }
         openModal('job-modal');
         return;
     }
@@ -162,6 +167,10 @@ function confirmBrandPick() {
     if (prevBtn) prevBtn.style.display = 'inline-flex';
     applyBrandBanner(_selectedBrand);
     populateContractorDropdown();
+    if (_prefilledDate) {
+        setJobVal('job-move-date', _prefilledDate);
+        _prefilledDate = '';
+    }
     openModal('job-modal');
 }
 
@@ -873,15 +882,8 @@ function calToday() {
 
 // Add a job pre-filled with a specific date
 function addJobForDate(dateStr) {
-    document.getElementById('job-modal-title').textContent = 'Add New Job';
-    document.getElementById('job-id').value = '';
-    // Reset form
-    document.querySelectorAll('#job-modal input, #job-modal select, #job-modal textarea').forEach(el => {
-        if (el.type !== 'hidden') el.value = '';
-    });
-    // Pre-fill move date
-    setJobVal('job-move-date', dateStr);
-    openModal('job-modal');
+    _prefilledDate = dateStr;
+    openJobBrandPicker();
 }
 
 // Show all jobs for a specific day
