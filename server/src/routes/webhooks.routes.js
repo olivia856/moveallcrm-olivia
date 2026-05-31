@@ -15,12 +15,6 @@ const ACTION_LABELS = {
     email_3m_booking: 'Email 3M Booking'
 };
 
-// GET /api/webhooks/config - Get webhook configuration status
-router.get('/config', (req, res) => {
-    const config = webhook.getWebhookConfig();
-    res.json({ success: true, data: config });
-});
-
 // GET /api/webhooks/config - protected
 router.get('/config', authenticate, (req, res) => {
     const config = webhook.getWebhookConfig();
