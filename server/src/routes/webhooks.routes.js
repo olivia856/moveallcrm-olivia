@@ -27,8 +27,8 @@ router.get('/config', authenticate, (req, res) => {
     res.json({ success: true, data: config });
 });
 
-// POST /api/webhooks/trigger - NO auth required (called from browser, proxied to n8n)
-router.post('/trigger', async (req, res, next) => {
+// POST /api/webhooks/trigger - protected
+router.post('/trigger', authenticate, async (req, res, next) => {
     try {
         const { action, leadId, entityType } = req.body;
         const type = entityType || 'lead';

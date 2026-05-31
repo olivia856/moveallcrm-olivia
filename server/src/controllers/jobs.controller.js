@@ -15,6 +15,10 @@ async function getAll(req, res, next) {
         else if (view === 'past')    { q = q.in('status', ['completed', 'cancelled']).lt('move_date', today); }
         else if (view === 'archived'){ q = q.eq('status', 'archived'); }
 
+        if (req.user && req.user.role !== 'admin') {
+            q = q.eq('assigned_to', req.user.id);
+        }
+
         q = q.order('move_date', { ascending: false })
              .range(parseInt(offset), parseInt(offset) + parseInt(limit) - 1);
 
