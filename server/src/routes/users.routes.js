@@ -4,8 +4,9 @@ const usersController = require('../controllers/users.controller');
 const { authenticate } = require('../middleware/auth');
 const { requireAdmin } = require('../middleware/rbac');
 
-// User routes — no JWT required (auth handled client-side via Supabase)
-// Admin-only access is enforced via frontend RBAC
+// User routes require authentication and admin access
+router.use(authenticate);
+router.use(requireAdmin);
 
 router.get('/', usersController.getAll);
 router.get('/:id', usersController.getById);

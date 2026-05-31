@@ -1,0 +1,16 @@
+{
+  "name": "moveallcrm-tests",
+  "version": "1.0.0",
+  "description": "Automated test suite for MoveAll CRM",
+  "scripts": {
+    "test": "jest --runInBand --verbose"
+  },
+  "devDependencies": {
+    "jest": "^29.7.0",
+    "node-fetch": "^2.7.0"
+  },
+  "jest": {
+    "testEnvironment": "node",
+    "testTimeout": 15000
+  }
+}
