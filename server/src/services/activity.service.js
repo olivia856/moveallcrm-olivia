@@ -1,17 +1,23 @@
-const { query } = require('../config/database');
+const { supabase } = require('../config/database');
 
 /**
  * Log an activity against any entity.
  */
 async function log({ entityType, entityId, userId, action, details }) {
     try {
-        const result = await query(
-            `INSERT INTO activity_logs (entity_type, entity_id, user_id, action, details)
-             VALUES ($1, $2, $3, $4, $5)
-             RETURNING *`,
-            [entityType, entityId || null, userId || null, action, details || null]
-        );
-        return result.rows[0];
+        const { data, error } = await supabase
+            .from('activity_logs')
+            .insert([{
+                entity_type: entityType,
+                entity_id: entityId || null,
+                user_id: userId || null,
+                action: action,
+                details: details || null
+            }])
+            .select();
+            
+        if (error) throw error;
+        return data[0];
     } catch (error) {
         console.error('Activity log error:', error.message);
         return null;
@@ -22,23 +28,23 @@ async function log({ entityType, entityId, userId, action, details }) {
  * Get recent activity logs.
  */
 async function getRecent({ entityType, entityId, limit = 20, offset = 0 } = {}) {
-    let sql = `
-        SELECT al.*, u.name as user_name
-        FROM activity_logs al
-        LEFT JOIN users u ON al.user_id = u.id
-        WHERE 1=1
-    `;
-    const params = [];
-    let p = 1;
+    let queryBuilder = supabase
+        .from('activity_logs')
+        .select('*, users(name)')
+        .order('created_at', { ascending: false })
+        .limit(parseInt(limit))
+        .range(parseInt(offset), parseInt(offset) + parseInt(limit) - 1);
 
-    if (entityType) { sql += ` AND al.entity_type = $${p++}`; params.push(entityType); }
-    if (entityId) { sql += ` AND al.entity_id = $${p++}`; params.push(entityId); }
+    if (entityType) { queryBuilder = queryBuilder.eq('entity_type', entityType); }
+    if (entityId) { queryBuilder = queryBuilder.eq('entity_id', entityId); }
 
-    sql += ` ORDER BY al.created_at DESC LIMIT $${p++} OFFSET $${p}`;
-    params.push(parseInt(limit), parseInt(offset));
+    const { data, error } = await queryBuilder;
+    if (error) throw error;
 
-    const result = await query(sql, params);
-    return result.rows;
+    return data.map(row => ({
+        ...row,
+        user_name: row.users ? row.users.name : null
+    }));
 }
 
 module.exports = { log, getRecent };

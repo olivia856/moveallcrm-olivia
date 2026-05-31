@@ -1,6 +1,6 @@
 const jwt = require('jsonwebtoken');
 const config = require('../config/env');
-const { query } = require('../config/database');
+const { supabase } = require('../config/database');
 
 // Verify JWT token
 async function authenticate(req, res, next) {
@@ -20,19 +20,20 @@ async function authenticate(req, res, next) {
             const decoded = jwt.verify(token, config.jwt.secret);
 
             // Verify user still exists
-            const result = await query(
-                'SELECT id, email, name, role FROM users WHERE id = $1',
-                [decoded.userId]
-            );
+            const { data: users, error } = await supabase
+                .from('users')
+                .select('id, email, name, role')
+                .eq('id', decoded.userId)
+                .limit(1);
 
-            if (result.rows.length === 0) {
+            if (error || !users || users.length === 0) {
                 return res.status(401).json({
                     success: false,
                     error: 'User no longer exists.'
                 });
             }
 
-            req.user = result.rows[0];
+            req.user = users[0];
             next();
         } catch (jwtError) {
             if (jwtError.name === 'TokenExpiredError') {

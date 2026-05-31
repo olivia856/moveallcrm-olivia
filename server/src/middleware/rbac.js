@@ -42,7 +42,7 @@ function requireRole(...roles) {
 
 // Check job access based on role
 async function checkJobAccess(req, res, next) {
-    const { query: dbQuery } = require('../config/database');
+    const { supabase } = require('../config/database');
     const jobId = req.params.id;
 
     if (!jobId) {
@@ -50,19 +50,20 @@ async function checkJobAccess(req, res, next) {
     }
 
     try {
-        const result = await dbQuery(
-            'SELECT id, assigned_to FROM jobs WHERE id = $1',
-            [jobId]
-        );
+        const { data: jobs, error } = await supabase
+            .from('jobs')
+            .select('id, assigned_to')
+            .eq('id', jobId)
+            .limit(1);
 
-        if (result.rows.length === 0) {
+        if (error || !jobs || jobs.length === 0) {
             return res.status(404).json({
                 success: false,
                 error: 'Job not found.'
             });
         }
 
-        const job = result.rows[0];
+        const job = jobs[0];
 
         // Admin can access all jobs
         if (req.user.role === 'admin') {
