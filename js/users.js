@@ -150,7 +150,7 @@ async function saveUser(e) {
         const method = editId ? 'PUT' : 'POST';
         const res    = await fetch(url, {
             method,
-            headers: { 'Content-Type': 'application/json' },
+            headers: db._headers(),
             body: JSON.stringify(data)
         });
         const result = await res.json();
@@ -169,7 +169,7 @@ async function saveUser(e) {
 async function deleteUser(id) {
     if (!await appConfirm('Delete this user?')) return;
     try {
-        const res    = await fetch(`/api/users/${id}`, { method: 'DELETE' });
+        const res    = await fetch(`/api/users/${id}`, { method: 'DELETE', headers: db._headers() });
         const result = await res.json();
         if (result.success) { showToast('Deleted', 'User removed', 'success'); loadUsersData(); }
         else showToast('Error', result.error || 'Delete failed', 'error');

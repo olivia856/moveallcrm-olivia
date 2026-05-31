@@ -959,7 +959,7 @@ async function addDropdownOption(fieldName) {
     try {
         const res = await fetch('/api/dropdown-options', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: db._headers(),
             body: JSON.stringify({ field_name: fieldName, option_value: value.trim() })
         });
         const json = await res.json();
@@ -985,7 +985,7 @@ async function triggerLeadWebhook(action) {
         const user = supabaseAuth.getUser();
         const res = await fetch('/api/webhooks/trigger', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: db._headers(),
             body: JSON.stringify({ action, leadId, triggered_by: user?.name||'Staff', triggered_by_email: user?.email||'', triggered_by_role: user?.role||'staff' })
         });
         const result = await res.json();
