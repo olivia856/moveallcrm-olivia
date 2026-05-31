@@ -6,21 +6,14 @@
 // authentication, authorization, and database access securely.
 
 const db = {
-    // Token management
-    _token: null,
-
-    _headers() {
-        const headers = {
-            'Content-Type': 'application/json'
+    _fetchOpts(method = 'GET', body = null) {
+        const opts = {
+            method,
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include'
         };
-        if (this._token) {
-            headers['Authorization'] = `Bearer ${this._token}`;
-        }
-        return headers;
-    },
-
-    setToken(token) {
-        this._token = token;
+        if (body) opts.body = JSON.stringify(body);
+        return opts;
     },
 
     // ── SELECT (list) ──────────────────────────────────────────
@@ -37,7 +30,7 @@ const db = {
         }
         if (search) params.set('search', search);
 
-        const res = await fetch(`/api/${segment}?${params}`, { headers: this._headers() });
+        const res = await fetch(`/api/${segment}?${params}`, this._fetchOpts('GET'));
         if (!res.ok) { const e = await res.json().catch(() => ({})); throw new Error(e.error || 'Fetch error'); }
         const json = await res.json();
         return { data: json.data || [], total: json.pagination?.total || 0 };
@@ -46,7 +39,7 @@ const db = {
     // ── SELECT ONE ──────────────────────────────────────────
     async selectOne(table, id) {
         const segment = this._segmentFor(table);
-        const res = await fetch(`/api/${segment}/${id}`, { headers: this._headers() });
+        const res = await fetch(`/api/${segment}/${id}`, this._fetchOpts('GET'));
         if (!res.ok) throw new Error('Not found');
         const json = await res.json();
         return json.data || null;
@@ -55,11 +48,7 @@ const db = {
     // ── INSERT ──────────────────────────────────────────────
     async insert(table, payload) {
         const segment = this._segmentFor(table);
-        const res = await fetch(`/api/${segment}`, {
-            method: 'POST',
-            headers: this._headers(),
-            body: JSON.stringify(payload)
-        });
+        const res = await fetch(`/api/${segment}`, this._fetchOpts('POST', payload));
         if (!res.ok) { const e = await res.json().catch(() => ({})); throw new Error(e.error || 'Insert error'); }
         const json = await res.json();
         return json.data;
@@ -68,11 +57,7 @@ const db = {
     // ── UPDATE ──────────────────────────────────────────────
     async update(table, id, payload) {
         const segment = this._segmentFor(table);
-        const res = await fetch(`/api/${segment}/${id}`, {
-            method: 'PUT',
-            headers: this._headers(),
-            body: JSON.stringify(payload)
-        });
+        const res = await fetch(`/api/${segment}/${id}`, this._fetchOpts('PUT', payload));
         if (!res.ok) { const e = await res.json().catch(() => ({})); throw new Error(e.error || 'Update error'); }
         const json = await res.json();
         return json.data;
@@ -81,10 +66,7 @@ const db = {
     // ── DELETE ──────────────────────────────────────────────
     async delete(table, id) {
         const segment = this._segmentFor(table);
-        const res = await fetch(`/api/${segment}/${id}`, {
-            method: 'DELETE',
-            headers: this._headers()
-        });
+        const res = await fetch(`/api/${segment}/${id}`, this._fetchOpts('DELETE'));
         if (!res.ok) { const e = await res.json().catch(() => ({})); throw new Error(e.error || 'Delete error'); }
         return true;
     },
@@ -92,7 +74,7 @@ const db = {
     // ── CUSTOM QUERY (for jobs views, logs filters) ─────────
     async query(table, params = '') {
         const segment = this._segmentFor(table);
-        const res = await fetch(`/api/${segment}?${params}`, { headers: this._headers() });
+        const res = await fetch(`/api/${segment}?${params}`, this._fetchOpts('GET'));
         if (!res.ok) { const e = await res.json().catch(() => ({})); throw new Error(e.error || 'Query error'); }
         const json = await res.json();
         return json.data || [];
@@ -122,6 +104,7 @@ const supabaseAuth = {
         const res = await fetch('/api/auth/login', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
             body: JSON.stringify({ email, password })
         });
 
@@ -133,21 +116,18 @@ const supabaseAuth = {
         const json = await res.json();
         if (!json.success) throw new Error(json.error || 'Login failed');
 
-        const token = json.data.token;
-        const user  = json.data.user;
+        const user = json.data.user;
 
-        // Store token and user info
-        db.setToken(token);
-        localStorage.setItem('movehome_token', token);
+        // Store user info (token is now in httpOnly cookie)
         localStorage.setItem('movehome_user', JSON.stringify(user));
 
         return user;
     },
 
-    logout() {
-        db.setToken(null);
-        localStorage.removeItem('movehome_token');
+    async logout() {
+        await fetch('/api/auth/logout', { method: 'POST', credentials: 'include' }).catch(() => {});
         localStorage.removeItem('movehome_user');
+        window.location.href = 'index.html';
     },
 
     getUser() {
@@ -156,10 +136,9 @@ const supabaseAuth = {
 
     isLoggedIn() {
         const u = this.getUser();
-        const t = localStorage.getItem('movehome_token');
-        if (u && u.id && u.name && u.role && t) {
-            // Restore token to db client on page load
-            db.setToken(t);
+        // Since token is in a cookie, we just trust the presence of user metadata
+        // Backend will reject if cookie is expired or missing.
+        if (u && u.id && u.name && u.role) {
             return true;
         }
         return false;

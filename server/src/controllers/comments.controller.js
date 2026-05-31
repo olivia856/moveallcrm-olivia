@@ -18,11 +18,13 @@ async function getByLead(req, res, next) {
 async function create(req, res, next) {
     try {
         const { leadId } = req.params;
-        const { comment, author_name, author_email } = req.body;
+        const { comment } = req.body;
+        const author_name = req.user?.name || 'Staff';
+        const author_email = req.user?.email || null;
         if (!comment?.trim()) return res.status(400).json({ success: false, error: 'Comment is required' });
         const { data, error } = await supabase
             .from('lead_comments')
-            .insert({ lead_id: leadId, comment: comment.trim(), author_name: author_name || 'Staff', author_email: author_email || null })
+            .insert({ lead_id: leadId, comment: comment.trim(), author_name: author_name, author_email: author_email })
             .select()
             .single();
         if (error) throw error;
