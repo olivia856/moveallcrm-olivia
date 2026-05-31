@@ -30,6 +30,23 @@ async function create(req, res, next) {
     } catch (err) { next(err); }
 }
 
+// PUT /api/comments/:id
+async function update(req, res, next) {
+    try {
+        const { id } = req.params;
+        const { comment } = req.body;
+        if (!comment?.trim()) return res.status(400).json({ success: false, error: 'Comment is required' });
+        const { data, error } = await supabase
+            .from('lead_comments')
+            .update({ comment: comment.trim() })
+            .eq('id', id)
+            .select()
+            .single();
+        if (error) throw error;
+        res.json({ success: true, data });
+    } catch (err) { next(err); }
+}
+
 // DELETE /api/comments/:id
 async function remove(req, res, next) {
     try {
@@ -40,4 +57,4 @@ async function remove(req, res, next) {
     } catch (err) { next(err); }
 }
 
-module.exports = { getByLead, create, remove };
+module.exports = { getByLead, create, update, remove };

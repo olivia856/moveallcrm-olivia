@@ -41,7 +41,7 @@ async function loadComments(leadId) {
     const list = document.getElementById('comments-list');
     list.innerHTML = '<div style="text-align:center;padding:24px;color:var(--text-muted)">Loading…</div>';
     try {
-        const res = await fetch(`${db._url}/rest/v1/lead_comments?lead_id=eq.${leadId}&order=created_at.desc`, {
+        const res = await fetch(`/api/leads/${leadId}/comments`, {
             headers: db._headers()
         });
         if (!res.ok) {
@@ -49,8 +49,8 @@ async function loadComments(leadId) {
             console.error('API Error:', errTxt);
             throw new Error(errTxt);
         }
-        const data = await res.json();
-        renderComments(data || []);
+        const json = await res.json();
+        renderComments(json.data || []);
     } catch (err) {
         console.error("Comments fetch error:", err);
         list.innerHTML = `<div style="padding:24px;color:var(--danger)">Error loading: ${escapeHtml(err.message)}</div>`;
@@ -103,11 +103,10 @@ async function addComment() {
 
     try {
         const user = supabaseAuth?.getUser?.() || null;
-        const res = await fetch(`${db._url}/rest/v1/lead_comments`, {
+        const res = await fetch(`/api/leads/${currentCommentLeadId}/comments`, {
             method: 'POST',
             headers: db._headers(),
             body: JSON.stringify({
-                lead_id:      currentCommentLeadId,
                 comment:      text,
                 author_name:  user?.name  || user?.email || 'Staff',
                 author_email: user?.email || null,
@@ -132,7 +131,7 @@ async function addComment() {
 async function deleteComment(id) {
     if (!await appConfirm('Delete this comment?')) return;
     try {
-        const res = await fetch(`${db._url}/rest/v1/lead_comments?id=eq.${id}`, {
+        const res = await fetch(`/api/comments/${id}`, {
             method: 'DELETE',
             headers: db._headers()
         });
@@ -157,8 +156,8 @@ async function editSingleComment(id, currentText) {
     if (newText === null || newText.trim() === currentText || !newText.trim()) return;
     
     try {
-        const res = await fetch(`${db._url}/rest/v1/lead_comments?id=eq.${id}`, {
-            method: 'PATCH',
+        const res = await fetch(`/api/comments/${id}`, {
+            method: 'PUT',
             headers: db._headers(),
             body: JSON.stringify({ comment: newText.trim() })
         });
@@ -241,7 +240,7 @@ const SMS_FIELD_MAP = {
 // ─── Load dropdown options ──────────────────────────────────────────────────
 async function loadDropdownOptions() {
     try {
-        const res = await fetch('/api/dropdown-options');
+        const res = await fetch('/api/dropdown-options', { headers: db._headers() });
         const json = await res.json();
         if (json.success) {
             dropdownOptions.heavy_items    = json.data.filter(o => o.field_name === 'heavy_items');
@@ -448,7 +447,7 @@ async function triggerFromMenu(leadId, action, phone, email) {
         const user = supabaseAuth?.getUser?.() || null;
         const res = await fetch('/api/webhooks/trigger', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: db._headers(),
             body: JSON.stringify({
                 action, leadId,
                 triggered_by:       user?.name  || 'Staff',

@@ -1,149 +1,152 @@
 // ============================================================
-// MoveHome CRM — Supabase Client (replaces Express server)
+// MoveHome CRM — Backend API Client (secure, no direct DB access)
 // ============================================================
 
-const SUPABASE_URL = 'https://fbcmldzculgqddmnepxw.supabase.co';
-const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZiY21sZHpjdWxncWRkbW5lcHh3Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MDg2MzQzMCwiZXhwIjoyMDg2NDM5NDMwfQ.7JZtOSbA27_kSFLR-xvyjzxYRr8h0rQGcOomk85PkRE';
+// All requests go through the Express backend which handles
+// authentication, authorization, and database access securely.
 
-// Lightweight Supabase REST client (no npm needed — pure fetch)
 const db = {
-    _url: SUPABASE_URL,
-    _key: SUPABASE_ANON_KEY,
+    // Token management
+    _token: null,
 
     _headers() {
-        return {
-            'apikey': this._key,
-            'Authorization': `Bearer ${this._key}`,
-            'Content-Type': 'application/json',
-            'Prefer': 'return=representation'
+        const headers = {
+            'Content-Type': 'application/json'
         };
+        if (this._token) {
+            headers['Authorization'] = `Bearer ${this._token}`;
+        }
+        return headers;
     },
 
-    // ── SELECT ──────────────────────────────────────────────
+    setToken(token) {
+        this._token = token;
+    },
+
+    // ── SELECT (list) ──────────────────────────────────────────
     async select(table, { columns = '*', filters = {}, search = null, searchCols = [], order = null, limit = 50, offset = 0 } = {}) {
-        let url = `${this._url}/rest/v1/${table}?select=${columns}&limit=${limit}&offset=${offset}`;
+        const segment = this._segmentFor(table);
+        const params = new URLSearchParams();
+        params.set('limit', limit);
+        params.set('offset', offset);
 
         for (const [col, val] of Object.entries(filters)) {
             if (val !== null && val !== undefined && val !== 'all') {
-                url += `&${col}=eq.${encodeURIComponent(val)}`;
+                params.set(col, val);
             }
         }
+        if (search) params.set('search', search);
 
-        if (search && searchCols.length > 0) {
-            const orParts = searchCols.map(c => `${c}.ilike.*${search}*`).join(',');
-            url += `&or=(${encodeURIComponent(orParts)})`;
-        }
-
-        if (order) url += `&order=${order}`;
-
-        // Get count
-        const countRes = await fetch(url.split('&limit=')[0] + '&limit=0', {
-            headers: { ...this._headers(), 'Prefer': 'count=exact' }
-        });
-        const total = parseInt(countRes.headers.get('Content-Range')?.split('/')[1] || '0');
-
-        const res = await fetch(url, { headers: this._headers() });
-        if (!res.ok) { const e = await res.json(); throw new Error(e.message || 'Fetch error'); }
-        const data = await res.json();
-        return { data, total };
+        const res = await fetch(`/api/${segment}?${params}`, { headers: this._headers() });
+        if (!res.ok) { const e = await res.json().catch(() => ({})); throw new Error(e.error || 'Fetch error'); }
+        const json = await res.json();
+        return { data: json.data || [], total: json.pagination?.total || 0 };
     },
 
     // ── SELECT ONE ──────────────────────────────────────────
     async selectOne(table, id) {
-        const res = await fetch(`${this._url}/rest/v1/${table}?id=eq.${id}&limit=1`, {
-            headers: this._headers()
-        });
+        const segment = this._segmentFor(table);
+        const res = await fetch(`/api/${segment}/${id}`, { headers: this._headers() });
         if (!res.ok) throw new Error('Not found');
-        const rows = await res.json();
-        return rows[0] || null;
+        const json = await res.json();
+        return json.data || null;
     },
 
     // ── INSERT ──────────────────────────────────────────────
     async insert(table, payload) {
-        const res = await fetch(`${this._url}/rest/v1/${table}`, {
+        const segment = this._segmentFor(table);
+        const res = await fetch(`/api/${segment}`, {
             method: 'POST',
             headers: this._headers(),
             body: JSON.stringify(payload)
         });
-        if (!res.ok) { const e = await res.json(); throw new Error(e.message || 'Insert error'); }
-        const rows = await res.json();
-        return Array.isArray(rows) ? rows[0] : rows;
+        if (!res.ok) { const e = await res.json().catch(() => ({})); throw new Error(e.error || 'Insert error'); }
+        const json = await res.json();
+        return json.data;
     },
 
     // ── UPDATE ──────────────────────────────────────────────
     async update(table, id, payload) {
-        payload.updated_at = new Date().toISOString();
-        const res = await fetch(`${this._url}/rest/v1/${table}?id=eq.${id}`, {
-            method: 'PATCH',
+        const segment = this._segmentFor(table);
+        const res = await fetch(`/api/${segment}/${id}`, {
+            method: 'PUT',
             headers: this._headers(),
             body: JSON.stringify(payload)
         });
-        if (!res.ok) { const e = await res.json(); throw new Error(e.message || 'Update error'); }
-        const rows = await res.json();
-        return Array.isArray(rows) ? rows[0] : rows;
+        if (!res.ok) { const e = await res.json().catch(() => ({})); throw new Error(e.error || 'Update error'); }
+        const json = await res.json();
+        return json.data;
     },
 
     // ── DELETE ──────────────────────────────────────────────
     async delete(table, id) {
-        const res = await fetch(`${this._url}/rest/v1/${table}?id=eq.${id}`, {
+        const segment = this._segmentFor(table);
+        const res = await fetch(`/api/${segment}/${id}`, {
             method: 'DELETE',
             headers: this._headers()
         });
-        if (!res.ok) { const e = await res.json(); throw new Error(e.message || 'Delete error'); }
+        if (!res.ok) { const e = await res.json().catch(() => ({})); throw new Error(e.error || 'Delete error'); }
         return true;
     },
 
-    // ── CUSTOM FILTER ───────────────────────────────────────
+    // ── CUSTOM QUERY (for jobs views, logs filters) ─────────
     async query(table, params = '') {
-        const res = await fetch(`${this._url}/rest/v1/${table}?${params}`, {
-            headers: this._headers()
-        });
-        if (!res.ok) { const e = await res.json(); throw new Error(e.message || 'Query error'); }
-        return await res.json();
+        const segment = this._segmentFor(table);
+        const res = await fetch(`/api/${segment}?${params}`, { headers: this._headers() });
+        if (!res.ok) { const e = await res.json().catch(() => ({})); throw new Error(e.error || 'Query error'); }
+        const json = await res.json();
+        return json.data || [];
+    },
+
+    // ── Helpers ─────────────────────────────────────────────
+    _segmentFor(table) {
+        const map = {
+            'leads':              'leads',
+            'jobs':               'jobs',
+            'storage_masterlist': 'storage',
+            'contacts':           'contacts',
+            'contractors':        'contractors',
+            'users':              'users',
+            'activity_logs':      'logs',
+            'lead_comments':      'leads'  // comments go through leads routes
+        };
+        return map[table] || table;
     }
 };
 
 // ============================================================
-// AUTH — Login via users table + bcrypt
+// AUTH — Login via backend Express API
 // ============================================================
 const supabaseAuth = {
     async login(email, password) {
-        // Fetch user by email (including contractor_name for staff job filtering)
-        const res = await fetch(
-            `${SUPABASE_URL}/rest/v1/users?email=eq.${encodeURIComponent(email)}&select=id,name,email,role,phone,password_hash,contractor_name&limit=1`,
-            { headers: db._headers() }
-        );
-        if (!res.ok) throw new Error('Login failed');
-        const users = await res.json();
-        if (!users || users.length === 0) throw new Error('Invalid email or password.');
-
-        const user = users[0];
-
-        // Verify bcrypt password via Supabase RPC
-        const verifyRes = await fetch(`${SUPABASE_URL}/rest/v1/rpc/verify_password`, {
+        const res = await fetch('/api/auth/login', {
             method: 'POST',
-            headers: db._headers(),
-            body: JSON.stringify({ p_email: email, p_password: password })
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email, password })
         });
 
-        if (!verifyRes.ok) throw new Error('Auth service error.');
-        const verified = await verifyRes.json();
-        if (!verified) throw new Error('Invalid email or password.');
+        if (!res.ok) {
+            const errJson = await res.json().catch(() => ({}));
+            throw new Error(errJson.error || 'Login failed');
+        }
 
-        // Store session — include contractor_name so job filter works immediately
-        const sessionUser = {
-            id: user.id,
-            name: user.name,
-            email: user.email,
-            role: user.role,
-            phone: user.phone || null,
-            contractor_name: user.contractor_name || null
-        };
-        localStorage.setItem('movehome_user', JSON.stringify(sessionUser));
-        return sessionUser;
+        const json = await res.json();
+        if (!json.success) throw new Error(json.error || 'Login failed');
+
+        const token = json.data.token;
+        const user  = json.data.user;
+
+        // Store token and user info
+        db.setToken(token);
+        localStorage.setItem('movehome_token', token);
+        localStorage.setItem('movehome_user', JSON.stringify(user));
+
+        return user;
     },
 
     logout() {
+        db.setToken(null);
+        localStorage.removeItem('movehome_token');
         localStorage.removeItem('movehome_user');
     },
 
@@ -153,6 +156,12 @@ const supabaseAuth = {
 
     isLoggedIn() {
         const u = this.getUser();
-        return !!(u && u.id && u.name && u.role);
+        const t = localStorage.getItem('movehome_token');
+        if (u && u.id && u.name && u.role && t) {
+            // Restore token to db client on page load
+            db.setToken(t);
+            return true;
+        }
+        return false;
     }
 };

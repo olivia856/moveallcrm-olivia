@@ -7,6 +7,7 @@ router.use(authenticate);
 
 router.get('/leads/:leadId/comments',  ctrl.getByLead);
 router.post('/leads/:leadId/comments', ctrl.create);
+router.put('/comments/:id',            ctrl.update);
 router.delete('/comments/:id',         ctrl.remove);
 
 module.exports = router;
