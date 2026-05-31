@@ -18,30 +18,11 @@ async function getByLead(req, res, next) {
 async function create(req, res, next) {
     try {
         const { leadId } = req.params;
-        const { comment } = req.body;
-        const author_name = req.user?.name || 'Staff';
-        const author_email = req.user?.email || null;
+        const { comment, author_name, author_email } = req.body;
         if (!comment?.trim()) return res.status(400).json({ success: false, error: 'Comment is required' });
         const { data, error } = await supabase
             .from('lead_comments')
-            .insert({ lead_id: leadId, comment: comment.trim(), author_name: author_name, author_email: author_email })
-            .select()
-            .single();
-        if (error) throw error;
-        res.json({ success: true, data });
-    } catch (err) { next(err); }
-}
-
-// PUT /api/comments/:id
-async function update(req, res, next) {
-    try {
-        const { id } = req.params;
-        const { comment } = req.body;
-        if (!comment?.trim()) return res.status(400).json({ success: false, error: 'Comment is required' });
-        const { data, error } = await supabase
-            .from('lead_comments')
-            .update({ comment: comment.trim() })
-            .eq('id', id)
+            .insert({ lead_id: leadId, comment: comment.trim(), author_name: author_name || 'Staff', author_email: author_email || null })
             .select()
             .single();
         if (error) throw error;
@@ -59,4 +40,4 @@ async function remove(req, res, next) {
     } catch (err) { next(err); }
 }
 
-module.exports = { getByLead, create, update, remove };
+module.exports = { getByLead, create, remove };

@@ -51,9 +51,9 @@ router.post('/trigger', authenticate, async (req, res, next) => {
             action_key:         action,
             action_label:       label,
             ...record,
-            triggered_by:       req.user?.name  || 'Staff',
-            triggered_by_email: req.user?.email || '',
-            triggered_by_role:  req.user?.role  || 'staff',
+            triggered_by:       req.body.triggered_by       || 'Staff',
+            triggered_by_email: req.body.triggered_by_email || '',
+            triggered_by_role:  req.body.triggered_by_role  || 'staff',
             triggered_at:       new Date().toISOString(),
             source:             'movehome-crm'
         };

@@ -1,133 +1,150 @@
 // ============================================================
-// MoveHome CRM — Backend API Client (secure, no direct DB access)
+// MoveHome CRM — Supabase Client (replaces Express server)
 // ============================================================
 
-// All requests go through the Express backend which handles
-// authentication, authorization, and database access securely.
+const SUPABASE_URL = 'https://fbcmldzculgqddmnepxw.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZiY21sZHpjdWxncWRkbW5lcHh3Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MDg2MzQzMCwiZXhwIjoyMDg2NDM5NDMwfQ.7JZtOSbA27_kSFLR-xvyjzxYRr8h0rQGcOomk85PkRE';
 
+// Lightweight Supabase REST client (no npm needed — pure fetch)
 const db = {
-    _fetchOpts(method = 'GET', body = null) {
-        const opts = {
-            method,
-            headers: { 'Content-Type': 'application/json' },
-            credentials: 'include'
+    _url: SUPABASE_URL,
+    _key: SUPABASE_ANON_KEY,
+
+    _headers() {
+        return {
+            'apikey': this._key,
+            'Authorization': `Bearer ${this._key}`,
+            'Content-Type': 'application/json',
+            'Prefer': 'return=representation'
         };
-        if (body) opts.body = JSON.stringify(body);
-        return opts;
     },
 
-    // ── SELECT (list) ──────────────────────────────────────────
+    // ── SELECT ──────────────────────────────────────────────
     async select(table, { columns = '*', filters = {}, search = null, searchCols = [], order = null, limit = 50, offset = 0 } = {}) {
-        const segment = this._segmentFor(table);
-        const params = new URLSearchParams();
-        params.set('limit', limit);
-        params.set('offset', offset);
+        let url = `${this._url}/rest/v1/${table}?select=${columns}&limit=${limit}&offset=${offset}`;
 
         for (const [col, val] of Object.entries(filters)) {
             if (val !== null && val !== undefined && val !== 'all') {
-                params.set(col, val);
+                url += `&${col}=eq.${encodeURIComponent(val)}`;
             }
         }
-        if (search) params.set('search', search);
 
-        const res = await fetch(`/api/${segment}?${params}`, this._fetchOpts('GET'));
-        if (!res.ok) { const e = await res.json().catch(() => ({})); throw new Error(e.error || 'Fetch error'); }
-        const json = await res.json();
-        return { data: json.data || [], total: json.pagination?.total || 0 };
+        if (search && searchCols.length > 0) {
+            const orParts = searchCols.map(c => `${c}.ilike.*${search}*`).join(',');
+            url += `&or=(${encodeURIComponent(orParts)})`;
+        }
+
+        if (order) url += `&order=${order}`;
+
+        // Get count
+        const countRes = await fetch(url.split('&limit=')[0] + '&limit=0', {
+            headers: { ...this._headers(), 'Prefer': 'count=exact' }
+        });
+        const total = parseInt(countRes.headers.get('Content-Range')?.split('/')[1] || '0');
+
+        const res = await fetch(url, { headers: this._headers() });
+        if (!res.ok) { const e = await res.json(); throw new Error(e.message || 'Fetch error'); }
+        const data = await res.json();
+        return { data, total };
     },
 
     // ── SELECT ONE ──────────────────────────────────────────
     async selectOne(table, id) {
-        const segment = this._segmentFor(table);
-        const res = await fetch(`/api/${segment}/${id}`, this._fetchOpts('GET'));
+        const res = await fetch(`${this._url}/rest/v1/${table}?id=eq.${id}&limit=1`, {
+            headers: this._headers()
+        });
         if (!res.ok) throw new Error('Not found');
-        const json = await res.json();
-        return json.data || null;
+        const rows = await res.json();
+        return rows[0] || null;
     },
 
     // ── INSERT ──────────────────────────────────────────────
     async insert(table, payload) {
-        const segment = this._segmentFor(table);
-        const res = await fetch(`/api/${segment}`, this._fetchOpts('POST', payload));
-        if (!res.ok) { const e = await res.json().catch(() => ({})); throw new Error(e.error || 'Insert error'); }
-        const json = await res.json();
-        return json.data;
+        const res = await fetch(`${this._url}/rest/v1/${table}`, {
+            method: 'POST',
+            headers: this._headers(),
+            body: JSON.stringify(payload)
+        });
+        if (!res.ok) { const e = await res.json(); throw new Error(e.message || 'Insert error'); }
+        const rows = await res.json();
+        return Array.isArray(rows) ? rows[0] : rows;
     },
 
     // ── UPDATE ──────────────────────────────────────────────
     async update(table, id, payload) {
-        const segment = this._segmentFor(table);
-        const res = await fetch(`/api/${segment}/${id}`, this._fetchOpts('PUT', payload));
-        if (!res.ok) { const e = await res.json().catch(() => ({})); throw new Error(e.error || 'Update error'); }
-        const json = await res.json();
-        return json.data;
+        payload.updated_at = new Date().toISOString();
+        const res = await fetch(`${this._url}/rest/v1/${table}?id=eq.${id}`, {
+            method: 'PATCH',
+            headers: this._headers(),
+            body: JSON.stringify(payload)
+        });
+        if (!res.ok) { const e = await res.json(); throw new Error(e.message || 'Update error'); }
+        const rows = await res.json();
+        return Array.isArray(rows) ? rows[0] : rows;
     },
 
     // ── DELETE ──────────────────────────────────────────────
     async delete(table, id) {
-        const segment = this._segmentFor(table);
-        const res = await fetch(`/api/${segment}/${id}`, this._fetchOpts('DELETE'));
-        if (!res.ok) { const e = await res.json().catch(() => ({})); throw new Error(e.error || 'Delete error'); }
+        const res = await fetch(`${this._url}/rest/v1/${table}?id=eq.${id}`, {
+            method: 'DELETE',
+            headers: this._headers()
+        });
+        if (!res.ok) { const e = await res.json(); throw new Error(e.message || 'Delete error'); }
         return true;
     },
 
-    // ── CUSTOM QUERY (for jobs views, logs filters) ─────────
+    // ── CUSTOM FILTER ───────────────────────────────────────
     async query(table, params = '') {
-        const segment = this._segmentFor(table);
-        const res = await fetch(`/api/${segment}?${params}`, this._fetchOpts('GET'));
-        if (!res.ok) { const e = await res.json().catch(() => ({})); throw new Error(e.error || 'Query error'); }
-        const json = await res.json();
-        return json.data || [];
-    },
-
-    // ── Helpers ─────────────────────────────────────────────
-    _segmentFor(table) {
-        const map = {
-            'leads':              'leads',
-            'jobs':               'jobs',
-            'storage_masterlist': 'storage',
-            'contacts':           'contacts',
-            'contractors':        'contractors',
-            'users':              'users',
-            'activity_logs':      'logs',
-            'lead_comments':      'leads'  // comments go through leads routes
-        };
-        return map[table] || table;
+        const res = await fetch(`${this._url}/rest/v1/${table}?${params}`, {
+            headers: this._headers()
+        });
+        if (!res.ok) { const e = await res.json(); throw new Error(e.message || 'Query error'); }
+        return await res.json();
     }
 };
 
 // ============================================================
-// AUTH — Login via backend Express API
+// AUTH — Login via users table + bcrypt
 // ============================================================
 const supabaseAuth = {
     async login(email, password) {
-        const res = await fetch('/api/auth/login', {
+        // Fetch user by email (including contractor_name for staff job filtering)
+        const res = await fetch(
+            `${SUPABASE_URL}/rest/v1/users?email=eq.${encodeURIComponent(email)}&select=id,name,email,role,phone,password_hash,contractor_name&limit=1`,
+            { headers: db._headers() }
+        );
+        if (!res.ok) throw new Error('Login failed');
+        const users = await res.json();
+        if (!users || users.length === 0) throw new Error('Invalid email or password.');
+
+        const user = users[0];
+
+        // Verify bcrypt password via Supabase RPC
+        const verifyRes = await fetch(`${SUPABASE_URL}/rest/v1/rpc/verify_password`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            credentials: 'include',
-            body: JSON.stringify({ email, password })
+            headers: db._headers(),
+            body: JSON.stringify({ p_email: email, p_password: password })
         });
 
-        if (!res.ok) {
-            const errJson = await res.json().catch(() => ({}));
-            throw new Error(errJson.error || 'Login failed');
-        }
+        if (!verifyRes.ok) throw new Error('Auth service error.');
+        const verified = await verifyRes.json();
+        if (!verified) throw new Error('Invalid email or password.');
 
-        const json = await res.json();
-        if (!json.success) throw new Error(json.error || 'Login failed');
-
-        const user = json.data.user;
-
-        // Store user info (token is now in httpOnly cookie)
-        localStorage.setItem('movehome_user', JSON.stringify(user));
-
-        return user;
+        // Store session — include contractor_name so job filter works immediately
+        const sessionUser = {
+            id: user.id,
+            name: user.name,
+            email: user.email,
+            role: user.role,
+            phone: user.phone || null,
+            contractor_name: user.contractor_name || null
+        };
+        localStorage.setItem('movehome_user', JSON.stringify(sessionUser));
+        return sessionUser;
     },
 
-    async logout() {
-        await fetch('/api/auth/logout', { method: 'POST', credentials: 'include' }).catch(() => {});
+    logout() {
         localStorage.removeItem('movehome_user');
-        window.location.href = 'index.html';
     },
 
     getUser() {
@@ -136,11 +153,6 @@ const supabaseAuth = {
 
     isLoggedIn() {
         const u = this.getUser();
-        // Since token is in a cookie, we just trust the presence of user metadata
-        // Backend will reject if cookie is expired or missing.
-        if (u && u.id && u.name && u.role) {
-            return true;
-        }
-        return false;
+        return !!(u && u.id && u.name && u.role);
     }
 };

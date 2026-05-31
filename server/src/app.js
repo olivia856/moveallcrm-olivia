@@ -50,21 +50,6 @@ app.get('/health', (req, res) => {
     res.json({ status: 'ok', timestamp: new Date().toISOString(), uptime: process.uptime() });
 });
 
-// ─── Cookie Parsing ──────────────────────────────────
-app.use((req, res, next) => {
-    req.cookies = {};
-    const cookieHeader = req.headers.cookie;
-    if (cookieHeader) {
-        cookieHeader.split(';').forEach(cookie => {
-            const parts = cookie.split('=');
-            if (parts.length >= 2) {
-                req.cookies[parts.shift().trim()] = decodeURI(parts.join('='));
-            }
-        });
-    }
-    next();
-});
-
 // ─── API Routes ──────────────────────────────────────
 app.use('/api', routes);
 

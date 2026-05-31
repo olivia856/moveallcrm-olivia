@@ -734,7 +734,7 @@ async function triggerJobWebhook(jobId, action) {
         const user = typeof supabaseAuth !== 'undefined' && supabaseAuth.getUser ? supabaseAuth.getUser() : null;
         const res = await fetch('/api/webhooks/trigger', {
             method: 'POST',
-            headers: db._headers(),
+            headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
                 action, 
                 leadId: jobId,

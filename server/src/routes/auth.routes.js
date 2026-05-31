@@ -23,7 +23,4 @@ router.post('/login', loginLimiter, loginValidation, authController.login);
 // GET /api/auth/me - Get current user (requires auth)
 router.get('/me', authenticate, authController.getMe);
 
-// POST /api/auth/logout - Logout user
-router.post('/logout', authController.logout);
-
 module.exports = router;
