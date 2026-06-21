@@ -70,23 +70,37 @@ async function trigger(action, data) {
 /**
  * Get the webhook URL for a specific action from environment variables.
  * Format: WEBHOOK_{ACTION_UPPERCASE}_URL
- * Falls back to N8N_WEBHOOK_URL if specific one not set.
+ * Falls back to N8N_BASE_URL + path if specific one not set.
  */
-const WEBHOOK_LINKS = {
-    sms_no_answer: 'https://n8n.n8k5q.space/webhook/e9f77d9b-c4da-4fea-9a1f-09fbc07a3d80',
-    sms_after_hours: 'https://n8n.n8k5q.space/webhook/14f5c15d-2390-4361-ab8f-92cf25a5f846',
-    sms_1st_checkin: 'https://n8n.n8k5q.space/webhook/c5116f54-7b70-4887-b898-bfcdfe1fa6a1',
-    sms_2nd_nudge: 'https://n8n.n8k5q.space/webhook/2822fc2b-ddfa-45bf-bd0c-6662b1e6c12a',
-    sms_3rd_final: 'https://n8n.n8k5q.space/webhook/2822fc2b-ddfa-45bf-bd0c-6662b1e6c12a',
-    email_2m_booking: 'https://n8n.n8k5q.space/webhook/1c875952-54e5-4435-a970-67dc95905277',
-    email_3m_booking: 'https://n8n.n8k5q.space/webhook/c1bc6abd-d239-46ac-ab55-7f8c58bd99d3',
-    on_way_sms: 'https://n8n.n8k5q.space/webhook/ab017c31-2726-499f-b8e7-86ff77f9a77e',
-    late_sms: 'https://n8n.n8k5q.space/webhook/cb1e7238-a642-4e53-86a2-1c8893cb459e'
+const N8N_BASE_URL = process.env.N8N_BASE_URL || 'https://n8n.n8k5q.space';
+
+const WEBHOOK_PATHS = {
+    sms_no_answer: '/webhook/e9f77d9b-c4da-4fea-9a1f-09fbc07a3d80',
+    sms_after_hours: '/webhook/14f5c15d-2390-4361-ab8f-92cf25a5f846',
+    sms_1st_checkin: '/webhook/c5116f54-7b70-4887-b898-bfcdfe1fa6a1',
+    sms_2nd_nudge: '/webhook/2822fc2b-ddfa-45bf-bd0c-6662b1e6c12a',
+    sms_3rd_final: '/webhook/2822fc2b-ddfa-45bf-bd0c-6662b1e6c12a',
+    email_2m_booking: '/webhook/1c875952-54e5-4435-a970-67dc95905277',
+    email_3m_booking: '/webhook/c1bc6abd-d239-46ac-ab55-7f8c58bd99d3',
+    on_way_sms: '/webhook/ab017c31-2726-499f-b8e7-86ff77f9a77e',
+    late_sms: '/webhook/cb1e7238-a642-4e53-86a2-1c8893cb459e'
 };
 
 function getWebhookUrl(action) {
-    // FORCE hardcoded links so .env doesn't override with old URLs
-    return WEBHOOK_LINKS[action] || null;
+    // Check if an explicit env var is set for this action (e.g. WEBHOOK_SMS_NO_ANSWER_URL)
+    const envKey = `WEBHOOK_${action.toUpperCase()}_URL`;
+    if (process.env[envKey]) {
+        return process.env[envKey];
+    }
+    
+    // Otherwise construct from base URL and path
+    const path = WEBHOOK_PATHS[action];
+    if (path) {
+        // Remove trailing slash from base url if present to prevent double slashes
+        const baseUrl = N8N_BASE_URL.replace(/\/$/, '');
+        return `${baseUrl}${path}`;
+    }
+    return null;
 }
 
 /**
