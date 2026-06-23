@@ -2,8 +2,8 @@
 // MoveHome CRM — Supabase Client (replaces Express server)
 // ============================================================
 
-const SUPABASE_URL = 'https://fbcmldzculgqddmnepxw.supabase.co';
-const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZiY21sZHpjdWxncWRkbW5lcHh3Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MDg2MzQzMCwiZXhwIjoyMDg2NDM5NDMwfQ.7JZtOSbA27_kSFLR-xvyjzxYRr8h0rQGcOomk85PkRE';
+const SUPABASE_URL = 'https://moveall-crm-supabase.bmkg0y.easypanel.host';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyAgCiAgICAicm9sZSI6ICJhbm9uIiwKICAgICJpc3MiOiAic3VwYWJhc2UtZGVtbyIsCiAgICAiaWF0IjogMTY0MTc2OTIwMCwKICAgICJleHAiOiAxNzk5NTM1NjAwCn0.B1E2Qn34oK0-A9H-i7uX_14zQkXhQzIqZfB66YQJdGE';
 
 // Lightweight Supabase REST client (no npm needed — pure fetch)
 const db = {
