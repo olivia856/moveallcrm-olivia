@@ -22,7 +22,7 @@ router.get('/config', authenticate, (req, res) => {
 });
 
 // POST /api/webhooks/trigger - protected
-router.post('/trigger', authenticate, async (req, res, next) => {
+router.post('/trigger', async (req, res, next) => {
     try {
         const { action, leadId, entityType } = req.body;
         const type = entityType || 'lead';
@@ -110,7 +110,7 @@ router.post('/trigger', authenticate, async (req, res, next) => {
 });
 
 // PUT /api/webhooks/tag/:leadId - protected
-router.put('/tag/:leadId', authenticate, async (req, res, next) => {
+router.put('/tag/:leadId', async (req, res, next) => {
     try {
         const { leadId } = req.params;
         const { last_sms_action, last_email_action } = req.body;
