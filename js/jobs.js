@@ -1036,7 +1036,7 @@ async function saveJob(e) {
         category: getJobVal('job-category'),
         contractor: getJobVal('job-contractor'),
         extras: getJobVal('job-extras'),
-        deposit: getJobVal('job-deposit'),
+        deposit: getJobVal('job-deposit') || null,
         invoice: getJobVal('job-invoice'),
         time_sheet: getJobVal('job-time-sheet'),
         move_out: getJobVal('job-move-out'),
