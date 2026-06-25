@@ -1451,7 +1451,7 @@
 @media (max-width: 768px) {
     .comments-input-area {
         /* Add explicitly large padding on mobile to guarantee it sits above all Android/iOS navigation bars */
-        padding-bottom: calc(40px + env(safe-area-inset-bottom));
+        padding-bottom: calc(120px + env(safe-area-inset-bottom)) !important;
     }
 }
 .comments-input-area textarea {
