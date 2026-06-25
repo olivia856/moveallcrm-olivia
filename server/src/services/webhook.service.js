@@ -79,7 +79,7 @@ const WEBHOOK_PATHS = {
     sms_after_hours: '/webhook/14f5c15d-2390-4361-ab8f-92cf25a5f846',
     sms_1st_checkin: '/webhook/c5116f54-7b70-4887-b898-bfcdfe1fa6a1',
     sms_2nd_nudge: '/webhook/2822fc2b-ddfa-45bf-bd0c-6662b1e6c12a',
-    sms_3rd_final: '/webhook/2822fc2b-ddfa-45bf-bd0c-6662b1e6c12a',
+    sms_3rd_final: '/webhook/7a8c7dc0-075a-419c-87e3-e5c68aee56ca',
     email_2m_booking: '/webhook/1c875952-54e5-4435-a970-67dc95905277',
     email_3m_booking: '/webhook/c1bc6abd-d239-46ac-ab55-7f8c58bd99d3',
     on_way_sms: '/webhook/ab017c31-2726-499f-b8e7-86ff77f9a77e',
