@@ -116,16 +116,16 @@ async function addComment() {
         if (res.ok) {
             input.value = '';
             loadComments(currentCommentLeadId);
-            alert("Success! Your comment has been saved to the database. You should see it in the list now.");
+            showToast('Success', 'Comment added successfully', 'success');
         } else {
             const errTxt = await res.text();
             console.error('Failed to add comment:', errTxt);
-            alert("Database Error: " + errTxt);
+            showToast('Error', 'Failed to save comment', 'error');
         }
     } catch (err) {
-        alert("Network Error: " + err.message);
+        showToast('Error', 'Network error: ' + err.message, 'error');
     } finally {
-        if (btn) { btn.disabled = false; btn.innerHTML = '<span>💬</span> Add Comment'; }
+        if (btn) { btn.disabled = false; btn.innerHTML = '<span>💬</span> Send'; }
     }
 }
 
@@ -164,11 +164,12 @@ async function editSingleComment(id, currentText) {
         });
         if (res.ok) {
             if (currentCommentLeadId) loadComments(currentCommentLeadId);
+            showToast('Updated', 'Comment updated successfully', 'success');
         } else {
-            alert('Failed to save edited comment.');
+            showToast('Error', 'Failed to save edited comment', 'error');
         }
     } catch(err) {
-        alert('Network error while editing comment.');
+        showToast('Error', 'Network error while editing comment', 'error');
     }
 }
 
