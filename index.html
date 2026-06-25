@@ -749,8 +749,11 @@
                         <input type="hidden" id="expand-modal-id">
                         <input type="text" id="expand-modal-comment-input" placeholder="Type a comment... (use @ to tag)" style="flex:1; padding:8px 12px; border-radius:6px; border:1px solid var(--border-color); background:var(--bg-base); color:var(--text-primary); font-size:0.85rem;" oninput="handleCommentAtMention(event)">
                         <div id="mention-dropdown" class="hidden" style="position:absolute; bottom:calc(100% + 4px); left:0; background:var(--bg-elevated); border:1px solid var(--border-color); border-radius:6px; max-height:150px; overflow-y:auto; width:200px; box-shadow:var(--shadow-md); z-index:100;"></div>
-                        <button class="btn btn-ghost col-admin-only" title="Upload Image" style="padding:0 8px;font-size:1.2rem;">📷</button>
-                        <button class="btn btn-primary" style="padding:8px 16px;font-size:0.85rem;" onclick="addJobCommentFromModal()">Post</button>
+                        
+                        <input type="file" id="job-file-upload" accept="image/*,application/pdf" class="hidden" onchange="handleJobFileUpload(event)">
+                        <button class="btn btn-ghost col-admin-only" id="job-file-upload-btn" title="Upload Image or PDF" style="padding:0 8px;font-size:1.2rem;" onclick="document.getElementById('job-file-upload').click()">📷</button>
+                        
+                        <button class="btn btn-primary" id="job-comment-post-btn" style="padding:8px 16px;font-size:0.85rem;" onclick="addJobCommentFromModal()">Post</button>
                     </div>
                 </div>
             </div>

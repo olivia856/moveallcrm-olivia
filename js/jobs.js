@@ -1158,7 +1158,7 @@ function openJobExpandModal(id) {
             job._localComments.forEach(c => {
                 const div = document.createElement('div');
                 div.style.cssText = 'margin-bottom:8px; border-bottom:1px solid var(--border-color); padding-bottom:4px;';
-                div.innerHTML = `<strong style="color:${c.roleColor};">${escapeHtml(c.userName)}</strong> <span style="font-size:0.7rem;">(${c.time})</span><br>${escapeHtml(c.text)}`;
+                div.innerHTML = `<strong style="color:${c.roleColor};">${escapeHtml(c.userName)}</strong> <span style="font-size:0.7rem;">(${c.time})</span><br>${formatCommentText(c.text)}`;
                 list.appendChild(div);
             });
         }
@@ -1201,7 +1201,7 @@ function addJobCommentFromModal() {
     div.style.cssText = 'margin-bottom:8px; border-bottom:1px solid var(--border-color); padding-bottom:4px;';
     div.innerHTML = `
         <strong style="color:${roleColor};">${escapeHtml(userName)}</strong> <span style="font-size:0.7rem;">(${time})</span><br>
-        ${escapeHtml(text)}
+        ${formatCommentText(text)}
     `;
     
     if (list && list.innerHTML.includes('No comments yet')) {
@@ -1215,6 +1215,46 @@ function addJobCommentFromModal() {
     input.value = '';
     
     showToast('Comment added', '', 'success');
+}
+
+function formatCommentText(text) {
+    if (!text) return '';
+    const urlRegex = /(https?:\/\/[^\s]+)/g;
+    return escapeHtml(text).replace(urlRegex, function(url) {
+        const decodedUrl = url.replace(/&amp;/g, '&');
+        if (decodedUrl.includes('crm_attachments')) {
+            return `<a href="${decodedUrl}" target="_blank" style="color:var(--primary-400); text-decoration:underline; font-weight:bold;">📎 View Attachment</a>`;
+        }
+        return `<a href="${decodedUrl}" target="_blank" style="color:var(--primary-400); text-decoration:underline;">🔗 Link</a>`;
+    });
+}
+
+async function handleJobFileUpload(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    const btn = document.getElementById('job-file-upload-btn');
+    const originalContent = btn.innerHTML;
+    btn.innerHTML = '⏳';
+    btn.disabled = true;
+
+    try {
+        const ext = file.name.split('.').pop();
+        const filename = `job_${Date.now()}_${Math.random().toString(36).substring(7)}.${ext}`;
+        
+        const url = await db.uploadStorage('crm_attachments', filename, file);
+        
+        const input = document.getElementById('expand-modal-comment-input');
+        input.value = (input.value + ' ' + url).trim();
+        showToast('Success', 'File uploaded. Add your comment and click Post!', 'success');
+    } catch (err) {
+        console.error('File upload error:', err);
+        showToast('Error', 'Failed to upload file. Check if bucket exists.', 'error');
+    } finally {
+        btn.innerHTML = originalContent;
+        btn.disabled = false;
+        event.target.value = ''; // Reset input
+    }
 }
 
 let teamMembersCache = null;

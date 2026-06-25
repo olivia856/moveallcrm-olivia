@@ -93,6 +93,25 @@ const db = {
         return true;
     },
 
+    // ── STORAGE ──────────────────────────────────────────────
+    async uploadStorage(bucket, path, file) {
+        const url = `${this._url}/storage/v1/object/${bucket}/${path}`;
+        const res = await fetch(url, {
+            method: 'POST',
+            headers: {
+                'apikey': this._key,
+                'Authorization': `Bearer ${this._key}`,
+                'Content-Type': file.type
+            },
+            body: file
+        });
+        if (!res.ok) {
+            const e = await res.json();
+            throw new Error(e.message || 'Failed to upload file');
+        }
+        return `${this._url}/storage/v1/object/public/${bucket}/${path}`;
+    },
+
     // ── CUSTOM FILTER ───────────────────────────────────────
     async query(table, params = '') {
         const res = await fetch(`${this._url}/rest/v1/${table}?${params}`, {
