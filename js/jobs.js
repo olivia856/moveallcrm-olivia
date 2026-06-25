@@ -1155,10 +1155,17 @@ function openJobExpandModal(id) {
         if (job._localComments.length === 0) {
             list.innerHTML = `<div style="color:var(--text-muted); text-align:center; padding:12px 0;">No comments yet.</div>`;
         } else {
-            job._localComments.forEach(c => {
+            const currentUser = getCurrentUser();
+            job._localComments.forEach((c, idx) => {
                 const div = document.createElement('div');
-                div.style.cssText = 'margin-bottom:8px; border-bottom:1px solid var(--border-color); padding-bottom:4px;';
-                div.innerHTML = `<strong style="color:${c.roleColor};">${escapeHtml(c.userName)}</strong> <span style="font-size:0.7rem;">(${c.time})</span><br>${formatCommentText(c.text)}`;
+                div.style.cssText = 'margin-bottom:8px; border-bottom:1px solid var(--border-color); padding-bottom:4px; position:relative;';
+                
+                let deleteBtn = '';
+                if (currentUser && currentUser.role === 'admin') {
+                    deleteBtn = `<button onclick="deleteJobComment(${job.id}, ${idx})" style="position:absolute; right:0; top:0; background:none; border:none; cursor:pointer; font-size:0.8rem; color:var(--danger);" title="Delete Comment">🗑️</button>`;
+                }
+                
+                div.innerHTML = `<strong style="color:${c.roleColor};">${escapeHtml(c.userName)}</strong> <span style="font-size:0.7rem;">(${c.time})</span>${deleteBtn}<br>${formatCommentText(c.text)}`;
                 list.appendChild(div);
             });
         }
@@ -1198,9 +1205,16 @@ function addJobCommentFromModal() {
        .catch(err => console.error('Failed to save comment to database:', err));
 
     const div = document.createElement('div');
-    div.style.cssText = 'margin-bottom:8px; border-bottom:1px solid var(--border-color); padding-bottom:4px;';
+    div.style.cssText = 'margin-bottom:8px; border-bottom:1px solid var(--border-color); padding-bottom:4px; position:relative;';
+    
+    let deleteBtn = '';
+    if (user && user.role === 'admin') {
+        const newIndex = job._localComments.length - 1;
+        deleteBtn = `<button onclick="deleteJobComment(${id}, ${newIndex})" style="position:absolute; right:0; top:0; background:none; border:none; cursor:pointer; font-size:0.8rem; color:var(--danger);" title="Delete Comment">🗑️</button>`;
+    }
+
     div.innerHTML = `
-        <strong style="color:${roleColor};">${escapeHtml(userName)}</strong> <span style="font-size:0.7rem;">(${time})</span><br>
+        <strong style="color:${roleColor};">${escapeHtml(userName)}</strong> <span style="font-size:0.7rem;">(${time})</span>${deleteBtn}<br>
         ${formatCommentText(text)}
     `;
     
@@ -1215,6 +1229,44 @@ function addJobCommentFromModal() {
     input.value = '';
     
     showToast('Comment added', '', 'success');
+}
+
+async function deleteJobComment(jobId, commentIndex) {
+    if (!await appConfirm('Are you sure you want to delete this comment?')) return;
+    
+    const job = allJobsCache.find(j => j.id == jobId);
+    if (!job || !job._localComments) return;
+    
+    const comment = job._localComments[commentIndex];
+    
+    // If there is an attachment URL in the comment, delete it from storage
+    const urlRegex = /(https?:\/\/[^\s]+)/g;
+    const urls = comment.text.match(urlRegex) || [];
+    for (const url of urls) {
+        if (url.includes('crm_attachments/')) {
+            const filename = url.split('crm_attachments/')[1];
+            if (filename) {
+                try {
+                    await db.deleteStorage('crm_attachments', filename);
+                } catch(e) {
+                    console.error('Failed to delete attachment', e);
+                }
+            }
+        }
+    }
+    
+    job._localComments.splice(commentIndex, 1);
+    
+    // Save to DB
+    try {
+        await api.put(`/jobs/${jobId}`, { staff_comments: JSON.stringify(job._localComments) });
+        showToast('Deleted', 'Comment and attachments deleted successfully', 'success');
+        
+        // Re-render the modal content to show it's gone
+        openJobExpandModal(jobId);
+    } catch (err) {
+        showToast('Error', 'Failed to delete comment', 'error');
+    }
 }
 
 function formatCommentText(text) {

@@ -112,6 +112,22 @@ const db = {
         return `${this._url}/storage/v1/object/public/${bucket}/${path}`;
     },
 
+    async deleteStorage(bucket, path) {
+        const url = `${this._url}/storage/v1/object/${bucket}/${path}`;
+        const res = await fetch(url, {
+            method: 'DELETE',
+            headers: {
+                'apikey': this._key,
+                'Authorization': `Bearer ${this._key}`
+            }
+        });
+        if (!res.ok) {
+            const e = await res.json();
+            throw new Error(e.message || 'Failed to delete file');
+        }
+        return true;
+    },
+
     // ── CUSTOM FILTER ───────────────────────────────────────
     async query(table, params = '') {
         const res = await fetch(`${this._url}/rest/v1/${table}?${params}`, {
