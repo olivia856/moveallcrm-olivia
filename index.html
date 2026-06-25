@@ -1494,10 +1494,10 @@
         <div id="comments-list" class="comments-list">
             <div style="text-align:center;padding:32px;color:var(--text-muted)">Loading comments…</div>
         </div>
-        <div class="comments-input-area">
-            <textarea id="comment-input" placeholder="Write a comment…" rows="3"></textarea>
-            <button class="btn btn-primary" onclick="addComment()">
-                <span>💬</span> Add Comment
+        <div class="comments-input-area" style="flex-direction: row; align-items: flex-end; gap: 8px;">
+            <textarea id="comment-input" placeholder="Write a comment…" rows="1" style="flex: 1; min-height: 44px; padding-top: 12px; margin: 0;"></textarea>
+            <button class="btn btn-primary" onclick="addComment()" style="white-space: nowrap; height: 44px; padding: 0 16px; margin: 0;">
+                <span style="margin-right: 4px;">💬</span> Send
             </button>
         </div>
     </div>
