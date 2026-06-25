@@ -1447,6 +1447,13 @@
     flex-shrink: 0;
     pointer-events: auto;
 }
+
+@media (max-width: 768px) {
+    .comments-input-area {
+        /* Add explicitly large padding on mobile to guarantee it sits above all Android/iOS navigation bars */
+        padding-bottom: calc(40px + env(safe-area-inset-bottom));
+    }
+}
 .comments-input-area textarea {
     width: 100%;
     padding: 10px 12px;
