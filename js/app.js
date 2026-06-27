@@ -48,6 +48,30 @@ function truncate(str, len) {
     return str.length > len ? str.substring(0, len) + '…' : str;
 }
 
+// Force-download a file from a URL (works for cross-origin Supabase files)
+async function downloadFile(url, filename) {
+    try {
+        showToast('Downloading', `Downloading ${filename}...`, 'success');
+        const response = await fetch(url);
+        if (!response.ok) throw new Error('Failed to fetch file');
+        const blob = await response.blob();
+        const blobUrl = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = blobUrl;
+        a.download = filename || 'download';
+        a.style.display = 'none';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        // Release the blob URL after a short delay
+        setTimeout(() => URL.revokeObjectURL(blobUrl), 10000);
+    } catch (err) {
+        console.error('Download failed:', err);
+        showToast('Error', 'Download failed. Opening in new tab instead.', 'error');
+        window.open(url, '_blank');
+    }
+}
+
 function formatDate(dateStr) {
     if (!dateStr) return '–';
     try {

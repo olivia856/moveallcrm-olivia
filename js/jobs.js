@@ -1202,16 +1202,18 @@ function renderJobComments(comments, jobId) {
             const isImage = c.file_type && c.file_type.startsWith('image/');
             const isPdf = c.file_type === 'application/pdf';
             const displayName = c.file_name || 'Attachment';
+            const safeUrl = c.file_url.replace(/'/g, "\\'");
+            const safeName = displayName.replace(/'/g, "\\'");
 
             if (isImage) {
                 fileHtml = `
                     <div style="margin-top:8px;">
                         <img src="${c.file_url}" alt="${escapeHtml(displayName)}" 
                             style="max-width:100%; max-height:200px; border-radius:6px; border:1px solid var(--border-color); cursor:pointer; object-fit:cover;"
-                            onclick="window.open('${c.file_url}', '_blank')" title="Click to view full size">
-                        <div style="margin-top:4px; display:flex; gap:8px; align-items:center;">
+                            onclick="window.open('${safeUrl}', '_blank')" title="Click to view full size">
+                        <div style="margin-top:6px; display:flex; gap:8px; align-items:center;">
                             <span style="font-size:0.75rem; color:var(--text-muted);">📷 ${escapeHtml(displayName)}</span>
-                            <a href="${c.file_url}" download="${escapeHtml(displayName)}" style="font-size:0.75rem; color:var(--primary-400); text-decoration:none; padding:2px 8px; border:1px solid var(--primary-400); border-radius:4px;">⬇️ Download</a>
+                            <button onclick="downloadFile('${safeUrl}', '${safeName}')" style="font-size:0.75rem; color:var(--primary-400); background:none; border:1px solid var(--primary-400); border-radius:4px; padding:2px 10px; cursor:pointer;">⬇️ Download</button>
                         </div>
                     </div>`;
             } else if (isPdf) {
@@ -1224,14 +1226,14 @@ function renderJobComments(comments, jobId) {
                         </div>
                         <div style="display:flex; gap:6px; flex-shrink:0;">
                             <a href="${c.file_url}" target="_blank" style="font-size:0.75rem; color:var(--text-primary); text-decoration:none; padding:4px 10px; background:var(--bg-elevated); border:1px solid var(--border-color); border-radius:4px;">👁️ View</a>
-                            <a href="${c.file_url}" download="${escapeHtml(displayName)}" style="font-size:0.75rem; color:var(--primary-400); text-decoration:none; padding:4px 10px; border:1px solid var(--primary-400); border-radius:4px;">⬇️ Download</a>
+                            <button onclick="downloadFile('${safeUrl}', '${safeName}')" style="font-size:0.75rem; color:var(--primary-400); background:none; border:1px solid var(--primary-400); border-radius:4px; padding:4px 10px; cursor:pointer;">⬇️ Download</button>
                         </div>
                     </div>`;
             } else {
                 fileHtml = `
-                    <div style="margin-top:6px;">
-                        <a href="${c.file_url}" download="${escapeHtml(displayName)}" style="color:var(--primary-400); font-size:0.8rem;">📎 ${escapeHtml(displayName)}</a>
-                        &nbsp;<a href="${c.file_url}" download="${escapeHtml(displayName)}" style="font-size:0.75rem; color:var(--primary-400); text-decoration:none; padding:2px 8px; border:1px solid var(--primary-400); border-radius:4px;">⬇️ Download</a>
+                    <div style="margin-top:6px; display:flex; gap:8px; align-items:center;">
+                        <span style="color:var(--primary-400); font-size:0.8rem;">📎 ${escapeHtml(displayName)}</span>
+                        <button onclick="downloadFile('${safeUrl}', '${safeName}')" style="font-size:0.75rem; color:var(--primary-400); background:none; border:1px solid var(--primary-400); border-radius:4px; padding:2px 10px; cursor:pointer;">⬇️ Download</button>
                     </div>`;
             }
         }

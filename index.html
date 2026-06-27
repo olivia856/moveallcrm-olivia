@@ -651,28 +651,28 @@
     <!-- ============================================ -->
 
     <!-- Custom Confirm Modal -->
-    <div class="modal-overlay hidden" id="custom-confirm-modal" style="z-index: 200000;">
-        <div class="modal" style="max-width:400px; padding: 24px; text-align: center;">
-            <div style="margin-bottom: 20px; font-size: 1.1rem; color: var(--text-primary);" id="custom-confirm-message">
+    <div class="modal-overlay hidden" id="custom-confirm-modal" style="z-index: 999999; background: rgba(0,0,0,0.75);">
+        <div class="modal" style="max-width:380px; padding: 32px 28px; text-align: center; border-radius: 16px; border: 1px solid var(--border-color);">
+            <div style="margin-bottom: 24px; font-size: 1.1rem; font-weight: 500; color: var(--text-primary); line-height: 1.5;" id="custom-confirm-message">
                 Are you sure?
             </div>
             <div style="display:flex;justify-content:center;gap:12px">
-                <button class="btn btn-secondary" id="custom-confirm-cancel">Cancel</button>
-                <button class="btn btn-primary" id="custom-confirm-ok">Confirm</button>
+                <button class="btn btn-secondary" id="custom-confirm-cancel" style="min-width:100px;">Cancel</button>
+                <button class="btn btn-primary" id="custom-confirm-ok" style="min-width:100px;">Confirm</button>
             </div>
         </div>
     </div>
 
     <!-- Custom Prompt Modal -->
-    <div class="modal-overlay hidden" id="custom-prompt-modal" style="z-index: 200000;">
-        <div class="modal" style="max-width:400px; padding: 24px;">
-            <div style="margin-bottom: 12px; font-size: 1.1rem; color: var(--text-primary); text-align: center;" id="custom-prompt-message">
+    <div class="modal-overlay hidden" id="custom-prompt-modal" style="z-index: 999999; background: rgba(0,0,0,0.75);">
+        <div class="modal" style="max-width:380px; padding: 32px 28px; border-radius: 16px; border: 1px solid var(--border-color);">
+            <div style="margin-bottom: 16px; font-size: 1.1rem; font-weight: 500; color: var(--text-primary); text-align: center;" id="custom-prompt-message">
                 Enter value:
             </div>
-            <input type="text" id="custom-prompt-input" style="width:100%; padding: 8px 12px; margin-bottom: 20px; border-radius: 6px; border: 1px solid var(--border-color); background: var(--bg-base); color: var(--text-primary);">
+            <input type="text" id="custom-prompt-input" style="width:100%; padding: 10px 12px; margin-bottom: 20px; border-radius: 8px; border: 1px solid var(--border-color); background: var(--bg-base); color: var(--text-primary); font-size: 0.95rem;">
             <div style="display:flex;justify-content:center;gap:12px">
-                <button class="btn btn-secondary" id="custom-prompt-cancel">Cancel</button>
-                <button class="btn btn-primary" id="custom-prompt-ok">Confirm</button>
+                <button class="btn btn-secondary" id="custom-prompt-cancel" style="min-width:100px;">Cancel</button>
+                <button class="btn btn-primary" id="custom-prompt-ok" style="min-width:100px;">Confirm</button>
             </div>
         </div>
     </div>
