@@ -1140,130 +1140,167 @@ function openJobExpandModal(id) {
     
     const inpEl = document.getElementById('expand-modal-comment-input');
     if(inpEl) inpEl.value = '';
-    
+
+    // Reset file input if present
+    const fileInp = document.getElementById('job-file-upload');
+    if (fileInp) fileInp.value = '';
+
     const list = document.getElementById('expand-modal-comments-list');
     if (list) {
-        list.innerHTML = '';
-        if (!job._localComments) {
-            try {
-                job._localComments = job.staff_comments ? JSON.parse(job.staff_comments) : [];
-            } catch(e) {
-                job._localComments = [];
-            }
-        }
-        
-        if (job._localComments.length === 0) {
-            list.innerHTML = `<div style="color:var(--text-muted); text-align:center; padding:12px 0;">No comments yet.</div>`;
-        } else {
-            const currentUser = getCurrentUser();
-            job._localComments.forEach((c, idx) => {
-                const div = document.createElement('div');
-                div.style.cssText = 'margin-bottom:8px; border-bottom:1px solid var(--border-color); padding-bottom:4px; position:relative;';
-                
-                let deleteBtn = '';
-                if (currentUser && currentUser.role === 'admin') {
-                    deleteBtn = `<button onclick="deleteJobComment(${job.id}, ${idx})" style="position:absolute; right:0; top:0; background:none; border:none; cursor:pointer; font-size:0.8rem; color:var(--danger);" title="Delete Comment">🗑️</button>`;
-                }
-                
-                div.innerHTML = `<strong style="color:${c.roleColor};">${escapeHtml(c.userName)}</strong> <span style="font-size:0.7rem;">(${c.time})</span>${deleteBtn}<br>${formatCommentText(c.text)}`;
-                list.appendChild(div);
-            });
-        }
+        list.innerHTML = `<div style="color:var(--text-muted); text-align:center; padding:12px 0;">Loading comments...</div>`;
     }
 
     if (typeof applyRBAC === 'function') applyRBAC();
 
     openModal('job-expand-modal');
+
+    // Fetch comments fresh from the database every time
+    loadJobComments(id);
+}
+
+async function loadJobComments(jobId) {
+    const list = document.getElementById('expand-modal-comments-list');
+    if (!list) return;
+    try {
+        const res = await api.get(`/jobs/${jobId}/comments`);
+        const comments = (res.success && res.data) ? res.data : [];
+        renderJobComments(comments, jobId);
+    } catch (err) {
+        console.error('Failed to load job comments:', err);
+        if (list) list.innerHTML = `<div style="color:var(--danger); text-align:center; padding:12px 0;">Failed to load comments.</div>`;
+    }
+}
+
+function renderJobComments(comments, jobId) {
+    const list = document.getElementById('expand-modal-comments-list');
+    if (!list) return;
+    const currentUser = getCurrentUser();
+    list.innerHTML = '';
+
+    if (!comments || comments.length === 0) {
+        list.innerHTML = `<div style="color:var(--text-muted); text-align:center; padding:12px 0;">No comments yet.</div>`;
+        return;
+    }
+
+    comments.forEach(c => {
+        const div = document.createElement('div');
+        div.style.cssText = 'margin-bottom:12px; border-bottom:1px solid var(--border-color); padding-bottom:8px; position:relative;';
+
+        const roleColor = c.author_role === 'admin' ? 'var(--primary-400)' : 'var(--success)';
+        const timeStr = c.created_at ? new Date(c.created_at).toLocaleString('en-AU', { day:'2-digit', month:'2-digit', year:'numeric', hour:'2-digit', minute:'2-digit' }) : 'Just now';
+
+        let deleteBtn = '';
+        if (currentUser && currentUser.role === 'admin') {
+            deleteBtn = `<button onclick="deleteJobComment('${c.id}', '${c.file_url || ''}', ${jobId})" style="position:absolute; right:0; top:0; background:none; border:none; cursor:pointer; font-size:0.85rem; color:var(--danger); padding:4px 8px; border-radius:4px;" title="Delete Comment">🗑️</button>`;
+        }
+
+        let fileHtml = '';
+        if (c.file_url) {
+            const isImage = c.file_type && c.file_type.startsWith('image/');
+            const isPdf = c.file_type === 'application/pdf';
+            const displayName = c.file_name || 'Attachment';
+
+            if (isImage) {
+                fileHtml = `
+                    <div style="margin-top:8px;">
+                        <img src="${c.file_url}" alt="${escapeHtml(displayName)}" 
+                            style="max-width:100%; max-height:200px; border-radius:6px; border:1px solid var(--border-color); cursor:pointer; object-fit:cover;"
+                            onclick="window.open('${c.file_url}', '_blank')" title="Click to view full size">
+                        <div style="margin-top:4px; display:flex; gap:8px; align-items:center;">
+                            <span style="font-size:0.75rem; color:var(--text-muted);">📷 ${escapeHtml(displayName)}</span>
+                            <a href="${c.file_url}" download="${escapeHtml(displayName)}" style="font-size:0.75rem; color:var(--primary-400); text-decoration:none; padding:2px 8px; border:1px solid var(--primary-400); border-radius:4px;">⬇️ Download</a>
+                        </div>
+                    </div>`;
+            } else if (isPdf) {
+                fileHtml = `
+                    <div style="margin-top:8px; padding:10px; background:var(--bg-base); border-radius:6px; border:1px solid var(--border-color); display:flex; align-items:center; gap:10px;">
+                        <span style="font-size:1.8rem;">📄</span>
+                        <div style="flex:1; min-width:0;">
+                            <div style="font-size:0.8rem; font-weight:600; color:var(--text-primary); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${escapeHtml(displayName)}</div>
+                            <div style="font-size:0.7rem; color:var(--text-muted);">PDF Document</div>
+                        </div>
+                        <div style="display:flex; gap:6px; flex-shrink:0;">
+                            <a href="${c.file_url}" target="_blank" style="font-size:0.75rem; color:var(--text-primary); text-decoration:none; padding:4px 10px; background:var(--bg-elevated); border:1px solid var(--border-color); border-radius:4px;">👁️ View</a>
+                            <a href="${c.file_url}" download="${escapeHtml(displayName)}" style="font-size:0.75rem; color:var(--primary-400); text-decoration:none; padding:4px 10px; border:1px solid var(--primary-400); border-radius:4px;">⬇️ Download</a>
+                        </div>
+                    </div>`;
+            } else {
+                fileHtml = `
+                    <div style="margin-top:6px;">
+                        <a href="${c.file_url}" download="${escapeHtml(displayName)}" style="color:var(--primary-400); font-size:0.8rem;">📎 ${escapeHtml(displayName)}</a>
+                        &nbsp;<a href="${c.file_url}" download="${escapeHtml(displayName)}" style="font-size:0.75rem; color:var(--primary-400); text-decoration:none; padding:2px 8px; border:1px solid var(--primary-400); border-radius:4px;">⬇️ Download</a>
+                    </div>`;
+            }
+        }
+
+        let textHtml = '';
+        if (c.comment) {
+            textHtml = `<div style="margin-top:4px; font-size:0.85rem; line-height:1.5; word-break:break-word;">${escapeHtml(c.comment)}</div>`;
+        }
+
+        div.innerHTML = `
+            <strong style="color:${roleColor};">${escapeHtml(c.author_name || 'Staff')}</strong>
+            <span style="font-size:0.7rem; color:var(--text-muted); margin-left:6px;">${timeStr}</span>
+            ${deleteBtn}
+            ${textHtml}
+            ${fileHtml}
+        `;
+        list.appendChild(div);
+    });
+    list.scrollTop = list.scrollHeight;
 }
 
 function sendQuickSMS(id, type) {
     showToast('SMS Request', `Twilio integration pending. Preparing to send ${type} SMS.`, 'success');
 }
 
-function addJobCommentFromModal() {
+async function addJobCommentFromModal() {
     const id = document.getElementById('expand-modal-id').value;
     const input = document.getElementById('expand-modal-comment-input');
-    if (!input) return;
+    if (!input || !id) return;
     const text = input.value.trim();
-    if (!text || !id) return;
+    if (!text) return;
 
-    const job = allJobsCache.find(j => j.id == id);
-    if (!job) return;
-
-    const list = document.getElementById('expand-modal-comments-list');
     const user = getCurrentUser();
-    
-    const roleColor = user?.role === 'admin' ? 'var(--primary-400)' : 'var(--success)';
-    const userName = user?.name || 'Unknown';
-    const time = 'Just now';
+    const postBtn = document.getElementById('job-comment-post-btn');
+    if (postBtn) { postBtn.disabled = true; postBtn.textContent = 'Posting...'; }
 
-    if (!job._localComments) job._localComments = [];
-    job._localComments.push({ roleColor, userName, text, time });
-
-    // Persist to database
-    api.put(`/jobs/${id}`, { staff_comments: JSON.stringify(job._localComments) })
-       .catch(err => console.error('Failed to save comment to database:', err));
-
-    const div = document.createElement('div');
-    div.style.cssText = 'margin-bottom:8px; border-bottom:1px solid var(--border-color); padding-bottom:4px; position:relative;';
-    
-    let deleteBtn = '';
-    if (user && user.role === 'admin') {
-        const newIndex = job._localComments.length - 1;
-        deleteBtn = `<button onclick="deleteJobComment(${id}, ${newIndex})" style="position:absolute; right:0; top:0; background:none; border:none; cursor:pointer; font-size:0.8rem; color:var(--danger);" title="Delete Comment">🗑️</button>`;
+    try {
+        const res = await api.post(`/jobs/${id}/comments`, {
+            comment: text,
+            author_name: user?.name || 'Staff',
+            author_role: user?.role || 'staff'
+        });
+        if (!res.success) throw new Error(res.error || 'Failed to post');
+        input.value = '';
+        showToast('Posted', 'Comment added', 'success');
+        await loadJobComments(id);
+    } catch (err) {
+        showToast('Error', 'Failed to post comment', 'error');
+    } finally {
+        if (postBtn) { postBtn.disabled = false; postBtn.textContent = 'Post'; }
     }
-
-    div.innerHTML = `
-        <strong style="color:${roleColor};">${escapeHtml(userName)}</strong> <span style="font-size:0.7rem;">(${time})</span>${deleteBtn}<br>
-        ${formatCommentText(text)}
-    `;
-    
-    if (list && list.innerHTML.includes('No comments yet')) {
-        list.innerHTML = '';
-    }
-    
-    if (list) {
-        list.appendChild(div);
-        list.scrollTop = list.scrollHeight;
-    }
-    input.value = '';
-    
-    showToast('Comment added', '', 'success');
 }
 
-async function deleteJobComment(jobId, commentIndex) {
-    if (!await appConfirm('Are you sure you want to delete this comment?')) return;
-    
-    const job = allJobsCache.find(j => j.id == jobId);
-    if (!job || !job._localComments) return;
-    
-    const comment = job._localComments[commentIndex];
-    
-    // If there is an attachment URL in the comment, delete it from storage
-    const urlRegex = /(https?:\/\/[^\s]+)/g;
-    const urls = comment.text.match(urlRegex) || [];
-    for (const url of urls) {
-        if (url.includes('crm_attachments/')) {
-            const filename = url.split('crm_attachments/')[1];
+async function deleteJobComment(commentId, fileUrl, jobId) {
+    if (!await appConfirm('Delete this comment and any attached file?')) return;
+
+    try {
+        const res = await api.del(`/job-comments/${commentId}`);
+        if (!res.success) throw new Error(res.error || 'Delete failed');
+
+        // If there is a file attached, also delete it from Supabase Storage
+        const urlToDelete = fileUrl || res.file_url;
+        if (urlToDelete && urlToDelete.includes('crm_attachments/')) {
+            const filename = urlToDelete.split('/crm_attachments/')[1];
             if (filename) {
-                try {
-                    await db.deleteStorage('crm_attachments', filename);
-                } catch(e) {
-                    console.error('Failed to delete attachment', e);
-                }
+                try { await db.deleteStorage('crm_attachments', filename); }
+                catch(e) { console.error('Could not delete file from storage', e); }
             }
         }
-    }
-    
-    job._localComments.splice(commentIndex, 1);
-    
-    // Save to DB
-    try {
-        await api.put(`/jobs/${jobId}`, { staff_comments: JSON.stringify(job._localComments) });
-        showToast('Deleted', 'Comment and attachments deleted successfully', 'success');
-        
-        // Re-render the modal content to show it's gone
-        openJobExpandModal(jobId);
+
+        showToast('Deleted', 'Comment removed', 'success');
+        await loadJobComments(jobId);
     } catch (err) {
         showToast('Error', 'Failed to delete comment', 'error');
     }
@@ -1285,27 +1322,52 @@ async function handleJobFileUpload(event) {
     const file = event.target.files[0];
     if (!file) return;
 
+    const id = document.getElementById('expand-modal-id').value;
+    if (!id) { showToast('Error', 'No job selected', 'error'); return; }
+
+    // Validate: images and PDFs only, max 20MB
+    const allowed = ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/heic', 'application/pdf'];
+    if (!allowed.includes(file.type)) {
+        showToast('Error', 'Only images (JPG, PNG, GIF, WebP, HEIC) and PDFs are allowed', 'error');
+        event.target.value = '';
+        return;
+    }
+    if (file.size > 20 * 1024 * 1024) {
+        showToast('Error', 'File is too large. Maximum size is 20MB', 'error');
+        event.target.value = '';
+        return;
+    }
+
     const btn = document.getElementById('job-file-upload-btn');
-    const originalContent = btn.innerHTML;
-    btn.innerHTML = '⏳';
-    btn.disabled = true;
+    const originalContent = btn ? btn.innerHTML : '';
+    if (btn) { btn.innerHTML = '⏳'; btn.disabled = true; }
 
     try {
-        const ext = file.name.split('.').pop();
-        const filename = `job_${Date.now()}_${Math.random().toString(36).substring(7)}.${ext}`;
+        const ext = file.name.split('.').pop().toLowerCase();
+        const safeFilename = `job_${id}_${Date.now()}_${Math.random().toString(36).substring(7)}.${ext}`;
         
-        const url = await db.uploadStorage('crm_attachments', filename, file);
+        const fileUrl = await db.uploadStorage('crm_attachments', safeFilename, file);
         
-        const input = document.getElementById('expand-modal-comment-input');
-        input.value = (input.value + ' ' + url).trim();
-        showToast('Success', 'File uploaded. Add your comment and click Post!', 'success');
+        const user = getCurrentUser();
+        const res = await api.post(`/jobs/${id}/comments`, {
+            comment: '',
+            author_name: user?.name || 'Staff',
+            author_role: user?.role || 'staff',
+            file_url: fileUrl,
+            file_name: file.name,
+            file_type: file.type
+        });
+
+        if (!res.success) throw new Error(res.error || 'Failed to save attachment');
+
+        showToast('Uploaded', `${file.name} uploaded successfully!`, 'success');
+        await loadJobComments(id);
     } catch (err) {
         console.error('File upload error:', err);
-        showToast('Error', 'Failed to upload file. Check if bucket exists.', 'error');
+        showToast('Error', 'Failed to upload file. Make sure the storage bucket is created in Supabase.', 'error');
     } finally {
-        btn.innerHTML = originalContent;
-        btn.disabled = false;
-        event.target.value = ''; // Reset input
+        if (btn) { btn.innerHTML = originalContent; btn.disabled = false; }
+        event.target.value = '';
     }
 }
 
