@@ -1162,8 +1162,11 @@ async function loadJobComments(jobId) {
     const list = document.getElementById('expand-modal-comments-list');
     if (!list) return;
     try {
-        const res = await api.get(`/jobs/${jobId}/comments`);
-        const comments = (res.success && res.data) ? res.data : [];
+        // Directly query the job_comments table in Supabase
+        const url = `${db._url}/rest/v1/job_comments?job_id=eq.${jobId}&order=created_at.asc`;
+        const res = await fetch(url, { headers: db._headers() });
+        if (!res.ok) throw new Error('Failed to load comments');
+        const comments = await res.json();
         renderJobComments(comments, jobId);
     } catch (err) {
         console.error('Failed to load job comments:', err);
@@ -1266,17 +1269,31 @@ async function addJobCommentFromModal() {
     if (postBtn) { postBtn.disabled = true; postBtn.textContent = 'Posting...'; }
 
     try {
-        const res = await api.post(`/jobs/${id}/comments`, {
-            comment: text,
-            author_name: user?.name || 'Staff',
-            author_role: user?.role || 'staff'
+        // Insert directly into job_comments table via Supabase REST
+        const url = `${db._url}/rest/v1/job_comments`;
+        const res = await fetch(url, {
+            method: 'POST',
+            headers: db._headers(),
+            body: JSON.stringify({
+                job_id: parseInt(id),
+                comment: text,
+                author_name: user?.name || 'Staff',
+                author_role: user?.role || 'staff',
+                file_url: null,
+                file_name: null,
+                file_type: null
+            })
         });
-        if (!res.success) throw new Error(res.error || 'Failed to post');
+        if (!res.ok) {
+            const e = await res.json();
+            throw new Error(e.message || 'Failed to post comment');
+        }
         input.value = '';
         showToast('Posted', 'Comment added', 'success');
         await loadJobComments(id);
     } catch (err) {
-        showToast('Error', 'Failed to post comment', 'error');
+        console.error('Post comment error:', err);
+        showToast('Error', err.message || 'Failed to post comment', 'error');
     } finally {
         if (postBtn) { postBtn.disabled = false; postBtn.textContent = 'Post'; }
     }
@@ -1286,13 +1303,17 @@ async function deleteJobComment(commentId, fileUrl, jobId) {
     if (!await appConfirm('Delete this comment and any attached file?')) return;
 
     try {
-        const res = await api.del(`/job-comments/${commentId}`);
-        if (!res.success) throw new Error(res.error || 'Delete failed');
+        // Delete directly from job_comments table via Supabase REST
+        const url = `${db._url}/rest/v1/job_comments?id=eq.${commentId}`;
+        const res = await fetch(url, { method: 'DELETE', headers: db._headers() });
+        if (!res.ok) {
+            const e = await res.json();
+            throw new Error(e.message || 'Delete failed');
+        }
 
-        // If there is a file attached, also delete it from Supabase Storage
-        const urlToDelete = fileUrl || res.file_url;
-        if (urlToDelete && urlToDelete.includes('crm_attachments/')) {
-            const filename = urlToDelete.split('/crm_attachments/')[1];
+        // Also delete the physical file from storage if one exists
+        if (fileUrl && fileUrl.includes('crm_attachments/')) {
+            const filename = fileUrl.split('/crm_attachments/')[1];
             if (filename) {
                 try { await db.deleteStorage('crm_attachments', filename); }
                 catch(e) { console.error('Could not delete file from storage', e); }
@@ -1302,6 +1323,7 @@ async function deleteJobComment(commentId, fileUrl, jobId) {
         showToast('Deleted', 'Comment removed', 'success');
         await loadJobComments(jobId);
     } catch (err) {
+        console.error('Delete comment error:', err);
         showToast('Error', 'Failed to delete comment', 'error');
     }
 }
@@ -1349,22 +1371,33 @@ async function handleJobFileUpload(event) {
         const fileUrl = await db.uploadStorage('crm_attachments', safeFilename, file);
         
         const user = getCurrentUser();
-        const res = await api.post(`/jobs/${id}/comments`, {
-            comment: '',
-            author_name: user?.name || 'Staff',
-            author_role: user?.role || 'staff',
-            file_url: fileUrl,
-            file_name: file.name,
-            file_type: file.type
+
+        // Insert directly into job_comments table via Supabase REST
+        const url = `${db._url}/rest/v1/job_comments`;
+        const postRes = await fetch(url, {
+            method: 'POST',
+            headers: db._headers(),
+            body: JSON.stringify({
+                job_id: parseInt(id),
+                comment: '',
+                author_name: user?.name || 'Staff',
+                author_role: user?.role || 'staff',
+                file_url: fileUrl,
+                file_name: file.name,
+                file_type: file.type
+            })
         });
 
-        if (!res.success) throw new Error(res.error || 'Failed to save attachment');
+        if (!postRes.ok) {
+            const e = await postRes.json();
+            throw new Error(e.message || 'Failed to save attachment record');
+        }
 
         showToast('Uploaded', `${file.name} uploaded successfully!`, 'success');
         await loadJobComments(id);
     } catch (err) {
         console.error('File upload error:', err);
-        showToast('Error', 'Failed to upload file. Make sure the storage bucket is created in Supabase.', 'error');
+        showToast('Error', `Upload failed: ${err.message}`, 'error');
     } finally {
         if (btn) { btn.innerHTML = originalContent; btn.disabled = false; }
         event.target.value = '';
