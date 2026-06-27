@@ -893,6 +893,7 @@ function openLeadModal(lead = null) {
             const emailEl = document.getElementById('lead-email-address');
             if (phoneEl) phoneEl.textContent = lead.phone || 'No phone';
             if (emailEl) emailEl.textContent = lead.email || 'No email';
+            loadLeadComments(lead.id);
         }
     }
     openModal('lead-modal');
@@ -1018,5 +1019,232 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
 });
 
+// ==========================================
+// LEAD COMMENTS
+// ==========================================
 
+async function loadLeadComments(leadId) {
+    const list = document.getElementById('lead-modal-comments-list');
+    if (!list) return;
+    try {
+        const url = `${db._url}/rest/v1/lead_comments?lead_id=eq.${leadId}&order=created_at.asc`;
+        const res = await fetch(url, { headers: db._headers() });
+        if (!res.ok) throw new Error('Failed to load comments');
+        const comments = await res.json();
+        renderLeadComments(comments, leadId);
+    } catch (err) {
+        console.error('Failed to load lead comments:', err);
+        if (list) list.innerHTML = `<div style="color:var(--danger); text-align:center; padding:12px 0;">Failed to load comments.</div>`;
+    }
+}
 
+function renderLeadComments(comments, leadId) {
+    const list = document.getElementById('lead-modal-comments-list');
+    if (!list) return;
+    const currentUser = getCurrentUser();
+    list.innerHTML = '';
+
+    if (!comments || comments.length === 0) {
+        list.innerHTML = `<div style="color:var(--text-muted); text-align:center; padding:12px 0;">No comments yet.</div>`;
+        return;
+    }
+
+    comments.forEach(c => {
+        const div = document.createElement('div');
+        div.style.cssText = 'margin-bottom:12px; border-bottom:1px solid var(--border-color); padding-bottom:8px; position:relative;';
+
+        const roleColor = c.author_role === 'admin' ? 'var(--primary-400)' : 'var(--success)';
+        const timeStr = c.created_at ? new Date(c.created_at).toLocaleString('en-AU', { day:'2-digit', month:'2-digit', year:'numeric', hour:'2-digit', minute:'2-digit' }) : 'Just now';
+
+        let deleteBtn = '';
+        if (currentUser && currentUser.role === 'admin') {
+            deleteBtn = `<button type="button" onclick="deleteLeadComment('${c.id}', '${c.file_url || ''}', ${leadId})" style="position:absolute; right:0; top:0; background:none; border:none; cursor:pointer; font-size:0.85rem; color:var(--danger); padding:4px 8px; border-radius:4px;" title="Delete Comment">🗑️</button>`;
+        }
+
+        let fileHtml = '';
+        if (c.file_url) {
+            const isImage = c.file_type && c.file_type.startsWith('image/');
+            const isPdf = c.file_type === 'application/pdf';
+            const displayName = c.file_name || 'Attachment';
+            const safeUrl = c.file_url.replace(/'/g, "\\'");
+            const safeName = displayName.replace(/'/g, "\\'");
+
+            if (isImage) {
+                fileHtml = `
+                    <div style="margin-top:8px;">
+                        <img src="${c.file_url}" alt="${escapeHtml(displayName)}" 
+                            style="max-width:100%; max-height:200px; border-radius:6px; border:1px solid var(--border-color); cursor:pointer; object-fit:cover;"
+                            onclick="window.open('${safeUrl}', '_blank')" title="Click to view full size">
+                        <div style="margin-top:6px; display:flex; gap:8px; align-items:center;">
+                            <span style="font-size:0.75rem; color:var(--text-muted);">📷 ${escapeHtml(displayName)}</span>
+                            <button type="button" onclick="downloadFile('${safeUrl}', '${safeName}')" style="font-size:0.75rem; color:var(--primary-400); background:none; border:1px solid var(--primary-400); border-radius:4px; padding:2px 10px; cursor:pointer;">⬇️ Download</button>
+                        </div>
+                    </div>`;
+            } else if (isPdf) {
+                fileHtml = `
+                    <div style="margin-top:8px; padding:10px; background:var(--bg-base); border-radius:6px; border:1px solid var(--border-color); display:flex; align-items:center; gap:10px;">
+                        <span style="font-size:1.8rem;">📄</span>
+                        <div style="flex:1; min-width:0;">
+                            <div style="font-size:0.8rem; font-weight:600; color:var(--text-primary); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${escapeHtml(displayName)}</div>
+                            <div style="font-size:0.7rem; color:var(--text-muted);">PDF Document</div>
+                        </div>
+                        <div style="display:flex; gap:6px; flex-shrink:0;">
+                            <a href="${c.file_url}" target="_blank" style="font-size:0.75rem; color:var(--text-primary); text-decoration:none; padding:4px 10px; background:var(--bg-elevated); border:1px solid var(--border-color); border-radius:4px;">👁️ View</a>
+                            <button type="button" onclick="downloadFile('${safeUrl}', '${safeName}')" style="font-size:0.75rem; color:var(--primary-400); background:none; border:1px solid var(--primary-400); border-radius:4px; padding:4px 10px; cursor:pointer;">⬇️ Download</button>
+                        </div>
+                    </div>`;
+            } else {
+                fileHtml = `
+                    <div style="margin-top:6px; display:flex; gap:8px; align-items:center;">
+                        <span style="color:var(--primary-400); font-size:0.8rem;">📎 ${escapeHtml(displayName)}</span>
+                        <button type="button" onclick="downloadFile('${safeUrl}', '${safeName}')" style="font-size:0.75rem; color:var(--primary-400); background:none; border:1px solid var(--primary-400); border-radius:4px; padding:2px 10px; cursor:pointer;">⬇️ Download</button>
+                    </div>`;
+            }
+        }
+
+        let textHtml = '';
+        if (c.comment) {
+            textHtml = `<div style="margin-top:4px; font-size:0.85rem; line-height:1.5; word-break:break-word;">${escapeHtml(c.comment)}</div>`;
+        }
+
+        div.innerHTML = `
+            <strong style="color:${roleColor};">${escapeHtml(c.author_name || 'Staff')}</strong>
+            <span style="font-size:0.7rem; color:var(--text-muted); margin-left:6px;">${timeStr}</span>
+            ${deleteBtn}
+            ${textHtml}
+            ${fileHtml}
+        `;
+        list.appendChild(div);
+    });
+    list.scrollTop = list.scrollHeight;
+}
+
+async function addLeadCommentFromModal() {
+    const id = document.getElementById('lead-id').value;
+    const input = document.getElementById('lead-modal-comment-input');
+    if (!input || !id) return;
+    const text = input.value.trim();
+    if (!text) return;
+
+    const user = getCurrentUser();
+    const postBtn = document.getElementById('lead-comment-post-btn');
+    if (postBtn) { postBtn.disabled = true; postBtn.textContent = 'Posting...'; }
+
+    try {
+        const url = `${db._url}/rest/v1/lead_comments`;
+        const res = await fetch(url, {
+            method: 'POST',
+            headers: db._headers(),
+            body: JSON.stringify({
+                lead_id: parseInt(id),
+                comment: text,
+                author_name: user?.name || 'Staff',
+                author_role: user?.role || 'staff',
+                file_url: null,
+                file_name: null,
+                file_type: null
+            })
+        });
+        if (!res.ok) {
+            const e = await res.json();
+            throw new Error(e.message || 'Failed to post comment');
+        }
+        input.value = '';
+        showToast('Posted', 'Comment added', 'success');
+        await loadLeadComments(id);
+    } catch (err) {
+        console.error('Post comment error:', err);
+        showToast('Error', err.message || 'Failed to post comment', 'error');
+    } finally {
+        if (postBtn) { postBtn.disabled = false; postBtn.textContent = 'Post'; }
+    }
+}
+
+async function deleteLeadComment(commentId, fileUrl, leadId) {
+    if (!await appConfirm('Delete this comment and any attached file?')) return;
+
+    try {
+        const url = `${db._url}/rest/v1/lead_comments?id=eq.${commentId}`;
+        const res = await fetch(url, { method: 'DELETE', headers: db._headers() });
+        if (!res.ok) {
+            const e = await res.json();
+            throw new Error(e.message || 'Delete failed');
+        }
+
+        if (fileUrl && fileUrl.includes('crm_attachments/')) {
+            const filename = fileUrl.split('/crm_attachments/')[1];
+            if (filename) {
+                try { await db.deleteStorage('crm_attachments', filename); }
+                catch(e) { console.error('Could not delete file from storage', e); }
+            }
+        }
+
+        showToast('Deleted', 'Comment removed', 'success');
+        await loadLeadComments(leadId);
+    } catch (err) {
+        console.error('Delete comment error:', err);
+        showToast('Error', 'Failed to delete comment', 'error');
+    }
+}
+
+async function handleLeadFileUpload(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    const id = document.getElementById('lead-id').value;
+    if (!id) { showToast('Error', 'No lead selected', 'error'); return; }
+
+    const allowed = ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/heic', 'application/pdf'];
+    if (!allowed.includes(file.type)) {
+        showToast('Error', 'Only images and PDFs are allowed', 'error');
+        event.target.value = '';
+        return;
+    }
+    if (file.size > 20 * 1024 * 1024) {
+        showToast('Error', 'File is too large. Maximum size is 20MB', 'error');
+        event.target.value = '';
+        return;
+    }
+
+    const btn = document.getElementById('lead-file-upload-btn');
+    const originalContent = btn ? btn.innerHTML : '';
+    if (btn) { btn.innerHTML = '⏳'; btn.disabled = true; }
+
+    try {
+        const ext = file.name.split('.').pop().toLowerCase();
+        const safeFilename = `lead_${id}_${Date.now()}_${Math.random().toString(36).substring(7)}.${ext}`;
+        
+        const fileUrl = await db.uploadStorage('crm_attachments', safeFilename, file);
+        
+        const user = getCurrentUser();
+
+        const url = `${db._url}/rest/v1/lead_comments`;
+        const postRes = await fetch(url, {
+            method: 'POST',
+            headers: db._headers(),
+            body: JSON.stringify({
+                lead_id: parseInt(id),
+                comment: '',
+                author_name: user?.name || 'Staff',
+                author_role: user?.role || 'staff',
+                file_url: fileUrl,
+                file_name: file.name,
+                file_type: file.type
+            })
+        });
+
+        if (!postRes.ok) {
+            const e = await postRes.json();
+            throw new Error(e.message || 'Failed to save attachment record');
+        }
+
+        showToast('Uploaded', `${file.name} uploaded successfully!`, 'success');
+        await loadLeadComments(id);
+    } catch (err) {
+        console.error('File upload error:', err);
+        showToast('Error', `Upload failed: ${err.message}`, 'error');
+    } finally {
+        if (btn) { btn.innerHTML = originalContent; btn.disabled = false; }
+        event.target.value = '';
+    }
+}

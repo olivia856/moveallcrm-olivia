@@ -944,6 +944,20 @@
                             <button type="button" class="webhook-btn webhook-email-2" onclick="triggerLeadWebhook('email_3m_booking')">✉ Email 3M Booking Form</button>
                         </div>
                     </div>
+                    <div class="webhook-section" id="lead-comments-section" style="margin-top:20px;">
+                        <h4 class="webhook-section-title">💬 Comments</h4>
+                        <div id="lead-modal-comments-list" style="max-height:150px; overflow-y:auto; background:var(--bg-base); padding:12px; border-radius:6px; margin-bottom:12px; font-size:0.85rem; color:var(--text-secondary);">
+                            <div style="color:var(--text-muted); text-align:center; padding:12px 0;">No comments yet.</div>
+                        </div>
+                        <div style="display:flex; gap:8px; position:relative;">
+                            <input type="text" id="lead-modal-comment-input" placeholder="Type a comment..." style="flex:1; padding:8px 12px; border-radius:6px; border:1px solid var(--border-color); background:var(--bg-base); color:var(--text-primary); font-size:0.85rem;">
+                            
+                            <input type="file" id="lead-file-upload" accept="image/*,application/pdf" class="hidden" onchange="handleLeadFileUpload(event)">
+                            <button type="button" class="btn btn-ghost col-admin-only" id="lead-file-upload-btn" title="Upload Image or PDF" style="padding:0 8px;font-size:1.2rem;" onclick="document.getElementById('lead-file-upload').click()">📷</button>
+                            
+                            <button type="button" class="btn btn-primary" id="lead-comment-post-btn" style="padding:8px 16px;font-size:0.85rem;" onclick="addLeadCommentFromModal()">Post</button>
+                        </div>
+                    </div>
                 </div>
 
                 <div class="modal-actions">
